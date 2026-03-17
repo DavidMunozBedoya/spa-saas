@@ -1,0 +1,132 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: oklch(0.6 0.18 250);
+  --color-primary-foreground: oklch(0.98 0.01 250);
+
+  --color-accent: oklch(0.7 0.2 300);
+  --color-background: oklch(0.15 0.02 250);
+  --color-foreground: oklch(0.95 0.01 250);
+
+  --color-card: oklch(0.2 0.03 250 / 0.8);
+  --color-card-foreground: oklch(0.95 0.01 250);
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+}
+
+@layer base {
+  body {
+    @apply bg-background text-foreground antialiased selection:bg-primary/30;
+  }
+
+  /* --- SUPER ADMIN THEME OVERRIDES --- */
+  /* Tema Violeta (Autoridad y Premium) */
+  .theme-admin-violet {
+    --color-primary: oklch(0.60 0.22 290);
+    --color-primary-foreground: oklch(0.98 0.01 290);
+    --color-card: oklch(0.18 0.03 290 / 0.8);
+    --color-accent: oklch(0.50 0.15 310);
+  }
+
+  /* --- LIGHT THEME (High Contrast & Professional) --- */
+  .light {
+    --color-background: oklch(0.99 0.01 250);
+    --color-foreground: oklch(0.25 0.04 250); /* Gris azulado oscuro profundo */
+    
+    --color-card: oklch(1 0 0);
+    --color-card-foreground: oklch(0.25 0.04 250);
+    
+    /* Variables semánticas para textos de apoyo */
+    --muted: oklch(0.6 0.02 250);
+    --muted-foreground: oklch(0.45 0.02 250);
+    
+    /* Configuración Glass para Modo Claro */
+    --glass-opacity: 0.95;
+    --glass-border: rgba(0, 0, 0, 0.08); /* Borde más visible */
+    --glass-bg: rgba(255, 255, 255, 0.95);
+    --glass-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.1);
+
+    /* Estilos de Input para Modo Claro */
+    --input-bg: rgba(0, 0, 0, 0.03);
+    --input-border: rgba(0, 0, 0, 0.1);
+    --input-focus-border: #000000;
+  }
+
+  :root:not(.light) {
+    --muted: oklch(0.5 0.02 250);
+    --muted-foreground: oklch(0.6 0.02 250);
+    
+    --glass-opacity: 0.1;
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --glass-bg: rgba(255, 255, 255, 0.1);
+    --glass-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.3);
+
+    /* Estilos de Input para Modo Oscuro */
+    --input-bg: rgba(255, 255, 255, 0.05);
+    --input-border: rgba(255, 255, 255, 0.1);
+    --input-focus-border: oklch(0.6 0.18 250); /* primary color */
+  }
+}
+
+@layer utilities {
+  .glass {
+    @apply backdrop-blur-md transition-all duration-300;
+    background-color: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+  }
+
+  .glass-header {
+    @apply sticky top-0 z-30 backdrop-blur-xl transition-all duration-300;
+    background-color: color-mix(in srgb, var(--color-background) 80%, transparent);
+    border-bottom: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+  }
+  
+  /* Helper para textos secundarios que deben cambiar segun el tema */
+  .text-muted-auto {
+    color: var(--muted);
+  }
+  
+  .text-muted-foreground-auto {
+    color: var(--muted-foreground);
+  }
+
+  @keyframes pulse-slow {
+
+    0%,
+    100% {
+      opacity: 0.3;
+      transform: scale(1);
+    }
+
+    50% {
+      opacity: 0.5;
+      transform: scale(1.1);
+    }
+  }
+
+  .animate-pulse-slow {
+    animation: pulse-slow 8s ease-in-out infinite;
+  }
+
+  .animate-gradient {
+    background: linear-gradient(-45deg, oklch(0.2 0.05 250), oklch(0.3 0.1 280), oklch(0.25 0.08 260));
+    background-size: 400% 400%;
+    animation: gradient 15s ease infinite;
+  }
+}
+
+@keyframes gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
