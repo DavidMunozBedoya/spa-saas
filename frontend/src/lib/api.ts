@@ -6,7 +6,7 @@ import { toast } from "sonner";
  * Implementa interceptores de seguridad para gestión de tokens y expiración de sesión.
  */
 const api = axios.create({
-    baseURL: "http://localhost:3010/api",
+    baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3010/api",
     headers: {
         "Content-Type": "application/json",
     },

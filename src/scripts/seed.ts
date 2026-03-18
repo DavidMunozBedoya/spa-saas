@@ -6,7 +6,7 @@ async function seed() {
 
     try {
         // 1. Crear Super Admin
-        const adminEmail = 'admin@sap-saas.com';
+        const adminEmail = 'admin@spa-saas.com';
         const hashedPassword = await hashPassword('admin123');
 
         await pool.query(

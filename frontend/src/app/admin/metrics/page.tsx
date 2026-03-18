@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import axios from "axios";
+import api from "@/lib/api";
 import { 
   Building2, 
   Users, 
@@ -32,9 +32,7 @@ export default function MetricsPage() {
   const fetchMetrics = async () => {
     try {
       setIsLoading(true);
-      const res = await axios.get("http://localhost:3010/api/platform/stats", {
-        headers: { Authorization: `Bearer ${sessionStorage.getItem("token")}` }
-      });
+      const res = await api.get("/platform/stats");
       setMetrics(res.data);
     } catch (error) {
       console.error("Error fetching metrics:", error);

@@ -295,7 +295,7 @@ export default function NewUserModal({ onClose, onSuccess, spaId, editData }: Ne
                   {[
                     ...(formData.role_ids.includes(1) ? [{ id: 1, name: "Propietario", desc: "Acceso Maestro (Protegido)" }] : []),
                     { id: 2, name: "Administrador", desc: "Control Total Secundario" },
-                    { id: 4, name: "Recepcionista", desc: "Agenda y Ventas" },
+                    { id: 4, name: "Recepcionista", desc: "Agenda y Facturación" },
                     { id: 3, name: "Terapeuta", desc: "Solo Agenda Médica" }
                   ].map(role => {
                     const isSelected = formData.role_ids.includes(role.id);
@@ -330,7 +330,7 @@ export default function NewUserModal({ onClose, onSuccess, spaId, editData }: Ne
                 </div>
               </div>
 
-              {/* Nueva Sección de Permisos Dinámicos */}
+              {/*Sección de Permisos Dinámicos */}
               <div className="sm:col-span-2 space-y-4 pt-4 border-t border-foreground/5">
                 <div className="flex items-center gap-3 mb-2">
                   <div className="w-8 h-8 bg-amber-500/10 rounded-lg flex items-center justify-center border border-amber-500/20">

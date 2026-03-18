@@ -26,16 +26,12 @@ export class InvoiceController {
 
     async liquidate(req: Request, res: Response) {
         try {
-            console.log("[DEBUG] Inicio de liquidación");
             const user = (req as any).user;
             const spaId = user?.spaId || user?.spa_id;
             const data = CreateInvoiceSchema.parse(req.body);
-            console.log("[DEBUG] Datos validados:", { appointment_id: data.appointment_id, spaId });
             const invoice = await invoiceService.liquidateAppointment({ ...data, spa_id: spaId as string });
-            console.log("[DEBUG] Liquidación exitosa en DB, retornando factura:", invoice?.invoice_number);
             return res.status(201).json(invoice);
         } catch (error: any) {
-            console.error("[DEBUG] Error en liquidación:", error);
             if (error.name === "ZodError") {
                 return res.status(400).json({ error: error.errors });
             }

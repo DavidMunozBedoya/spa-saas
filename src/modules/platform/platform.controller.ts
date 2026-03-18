@@ -63,7 +63,6 @@ export class PlatformController {
      * Registra un nuevo socio/tenant (Spa) y su administrador principal.
      */
     async registerSpa(req: Request, res: Response) {
-        console.log(`[DEBUG] Intentando registrar Spa:`, req.body);
         try {
             const { name, spaEmail, ownerName, ownerEmail, password, timezone } = req.body;
 
