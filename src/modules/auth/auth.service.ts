@@ -16,14 +16,14 @@ export class AuthService {
 
         // 1. Intentar buscar en usuarios de Spas
         const result = await pool.query(
-            `SELECT u.id, u.spa_id, u.full_name, u.password_hash, u.active,
+            `SELECT u.id, u.spa_id, u.full_name, u.password_hash, u.active, u.staff_id,
                     ARRAY_AGG(ur.role_id) as role_ids,
                     s.active as spa_active
              FROM users u
              INNER JOIN spas s ON u.spa_id = s.id
              LEFT JOIN user_roles ur ON u.id = ur.user_id
              WHERE u.email = $1
-             GROUP BY u.id, s.active`,
+             GROUP BY u.id, s.active, u.staff_id`,
             [email]
         );
 
@@ -44,6 +44,7 @@ export class AuthService {
                 {
                     userId: user.id,
                     spaId: user.spa_id,
+                    staffId: user.staff_id,
                     roleIds: user.role_ids
                 },
                 this.jwtSecret,
@@ -59,6 +60,7 @@ export class AuthService {
                     full_name: user.full_name,
                     email,
                     spa_id: user.spa_id,
+                    staff_id: user.staff_id,
                     role_ids: user.role_ids,
                     permissions,
                     isPlatformAdmin: false,

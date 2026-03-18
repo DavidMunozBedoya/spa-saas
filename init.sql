@@ -213,5 +213,5 @@ WHERE r.name = 'Recepcionista' AND p.code IN (
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r, permissions p
 WHERE r.name = 'Terapeuta' AND p.code IN (
-  'appointments:view', 'appointments:edit', 'services:view', 'clients:view'
+  'appointments:view', 'appointments:edit', 'services:view', 'clients:view', 'reports:view'
 ) ON CONFLICT DO NOTHING;

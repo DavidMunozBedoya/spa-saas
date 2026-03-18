@@ -17,7 +17,16 @@ export class ReportsController {
             const start = (startDate as string) || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
             const end = (endDate as string) || new Date().toISOString();
 
-            const stats = await reportsService.getDashboardStats(spaId, start, end);
+            // Si el usuario es terapeuta (tiene staffId asociado), filtramos por su ID
+            const staffId = user.staff_id || user.staffId;
+            const isTherapist = user.roleIds?.includes(3) || user.role_ids?.includes(3);
+            
+            const stats = await reportsService.getDashboardStats(
+                spaId, 
+                start, 
+                end, 
+                isTherapist ? staffId : undefined
+            );
             return res.json(stats);
         } catch (error: any) {
             return res.status(500).json({ error: error.message });
