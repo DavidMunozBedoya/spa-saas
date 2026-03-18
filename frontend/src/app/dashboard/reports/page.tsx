@@ -158,9 +158,6 @@ export default function ReportsPage() {
                       </button>
                   ))}
               </div>
-              <button className="p-3 glass rounded-2xl border border-foreground/10 text-foreground/40 hover:text-primary transition-all">
-                  <Download size={20} />
-              </button>
           </div>
         </div>
 
