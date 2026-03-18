@@ -13,13 +13,23 @@ export class PermissionService {
      */
     async getUserPermissions(userId: string, spaId: string): Promise<string[]> {
         const query = `
-            WITH role_perms AS (
+            WITH user_has_admin_role AS (
+                SELECT 1 FROM user_roles ur
+                JOIN roles r ON ur.role_id = r.id
+                WHERE ur.user_id = $1 AND r.name IN ('Propietario', 'Administrador')
+            ),
+            role_perms AS (
                 -- Permisos heredados de los roles del usuario
                 SELECT p.code
                 FROM user_roles ur
                 JOIN role_permissions rp ON ur.role_id = rp.role_id
                 JOIN permissions p ON rp.permission_id = p.id
                 WHERE ur.user_id = $1
+                UNION
+                -- Si es Propietario o Administrador, tiene todos los permisos (excepto plataforma)
+                SELECT code FROM permissions 
+                WHERE code != 'platform:manage' 
+                AND EXISTS (SELECT 1 FROM user_has_admin_role)
             ),
             direct_allowed AS (
                 -- Permisos concedidos directamente (Overrides)

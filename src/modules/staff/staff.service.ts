@@ -53,12 +53,22 @@ export class StaffService {
     /**
      * Obtiene el personal perteneciente a un Spa, opcionalmente incluyendo inactivos.
      */
-    async getBySpa(spa_id: string, includeInactive: boolean = false) {
-        const query = includeInactive
-            ? "SELECT * FROM staff WHERE spa_id = $1 ORDER BY active DESC, created_at DESC"
-            : "SELECT * FROM staff WHERE spa_id = $1 AND active = true ORDER BY created_at DESC";
+    async getBySpa(spa_id: string, includeInactive: boolean = false, staff_id?: string) {
+        let query = includeInactive
+            ? "SELECT * FROM staff WHERE spa_id = $1"
+            : "SELECT * FROM staff WHERE spa_id = $1 AND active = true";
 
-        const result = await pool.query(query, [spa_id]);
+        const params: any[] = [spa_id];
+        let paramIdx = 2;
+
+        if (staff_id) {
+            query += ` AND id = $${paramIdx++}`;
+            params.push(staff_id);
+        }
+
+        query += includeInactive ? " ORDER BY active DESC, created_at DESC" : " ORDER BY created_at DESC";
+
+        const result = await pool.query(query, params);
         return result.rows;
     }
 

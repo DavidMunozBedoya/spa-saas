@@ -26,6 +26,13 @@ export class StaffController {
         try {
             const user = (req as any).user;
             const spaId = user?.spaId || user?.spa_id;
+            const hasViewAll = user?.permissions?.includes("staff:view-all");
+
+            if (!hasViewAll && user?.staffId) {
+                const member = await staffService.getById(user.staffId as string, spaId as string);
+                return res.json(member ? [member] : []);
+            }
+
             const therapists = await staffService.getTherapists(spaId as string);
             return res.json(therapists);
         } catch (error: any) {
@@ -41,8 +48,11 @@ export class StaffController {
             const user = (req as any).user;
             const spaId = user?.spaId || user?.spa_id;
             const includeInactive = req.query.includeInactive === "true";
+            const hasViewAll = user?.permissions?.includes("staff:view-all");
 
-            const staff = await staffService.getBySpa(spaId as string, includeInactive);
+            const filterId = !hasViewAll ? (user?.staffId as string) : undefined;
+
+            const staff = await staffService.getBySpa(spaId as string, includeInactive, filterId);
             return res.json(staff);
         } catch (error: any) {
             return res.status(500).json({ error: error.message });

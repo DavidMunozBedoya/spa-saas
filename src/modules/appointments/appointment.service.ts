@@ -130,7 +130,7 @@ export class AppointmentService {
     /**
      * Obtiene todas las citas de un Spa con información de cliente y personal.
      */
-    async getBySpa(spa_id: string, filters?: { status?: string, startDate?: string, endDate?: string, limit?: number, offset?: number }) {
+    async getBySpa(spa_id: string, filters?: { status?: string, startDate?: string, endDate?: string, limit?: number, offset?: number, staff_id?: string }) {
         let query = `
             SELECT a.*, c.full_name as client_name, c.email as client_email, s.full_name as staff_name,
                    COUNT(*) OVER() as total_count
@@ -142,6 +142,11 @@ export class AppointmentService {
 
         const params: any[] = [spa_id];
         let paramIdx = 2;
+
+        if (filters?.staff_id) {
+            query += ` AND a.staff_id = $${paramIdx++}`;
+            params.push(filters.staff_id);
+        }
 
         if (filters?.status && filters.status !== 'ALL') {
             query += ` AND a.status = $${paramIdx++}`;

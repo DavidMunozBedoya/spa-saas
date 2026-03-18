@@ -191,6 +191,8 @@ INSERT INTO permissions (code, description) VALUES
 ('staff:view', 'Ver lista de personal del Spa'),
 ('staff:manage', 'Gestionar personal (crear/editar)'),
 ('spa:config', 'Configurar perfil del Spa (Logo, Redes, Horarios)'),
+('appointments:view-all', 'Ver citas de todo el personal'),
+('staff:view-all', 'Ver perfiles de todo el personal'),
 ('platform:manage', 'Administración global de la plataforma (SuperAdmin)')
 ON CONFLICT (code) DO NOTHING;
 
@@ -204,9 +206,9 @@ ON CONFLICT DO NOTHING;
 INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r, permissions p
 WHERE r.name = 'Recepcionista' AND p.code IN (
-  'appointments:create', 'appointments:view', 'appointments:edit',
+  'appointments:create', 'appointments:view', 'appointments:view-all', 'appointments:edit',
   'services:view', 'invoices:view', 'invoices:manage',
-  'clients:view', 'clients:manage', 'staff:view', 'spa:config', 'reports:view'
+  'clients:view', 'clients:manage', 'staff:view', 'staff:view-all', 'spa:config', 'reports:view'
 ) ON CONFLICT DO NOTHING;
 
 -- Terapeuta

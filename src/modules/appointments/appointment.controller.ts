@@ -33,12 +33,16 @@ export class AppointmentController {
             const currentPage = parseInt(page as string) || 1;
             const offset = (currentPage - 1) * pageSize;
 
+            const hasViewAll = (user?.permissions || []).includes("appointments:view-all");
+            const staffIdFilter = !hasViewAll ? (user?.staffId as string) : undefined;
+
             const result = await appointmentService.getBySpa(spaId as string, {
                 status: status as string,
                 startDate: startDate as string,
                 endDate: endDate as string,
                 limit: pageSize,
-                offset
+                offset,
+                staff_id: staffIdFilter
             });
             return res.json(result);
         } catch (error: any) {
@@ -54,8 +58,17 @@ export class AppointmentController {
             const { id } = req.params;
             const user = (req as any).user;
             const spaId = user?.spaId || user?.spa_id;
+            const hasViewAll = (user?.permissions || []).includes("appointments:view-all");
+            
             const appointment = await appointmentService.getById(id as string, spaId as string);
+            
             if (!appointment) return res.status(404).json({ error: "Cita no encontrada" });
+
+            // Si no tiene permiso global, verificar que la cita le pertenezca
+            if (!hasViewAll && appointment.staff_id !== user.staffId) {
+                return res.status(403).json({ error: "No tienes permiso para ver esta cita" });
+            }
+
             return res.json(appointment);
         } catch (error: any) {
             return res.status(500).json({ error: error.message });
