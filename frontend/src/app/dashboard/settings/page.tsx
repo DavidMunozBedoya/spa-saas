@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { PermissionGuard } from "@/components/auth/PermissionGuard";
 
 const FIELD_NAMES: Record<string, string> = {
   name: "Nombre del Spa",
@@ -152,7 +153,8 @@ export default function SpaSettingsPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-10">
+    <PermissionGuard permission="spa:config">
+      <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-10 px-4">
       
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -358,5 +360,6 @@ export default function SpaSettingsPage() {
 
       </div>
     </div>
+    </PermissionGuard>
   );
 }

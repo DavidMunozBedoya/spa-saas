@@ -26,6 +26,7 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import ConfirmModal from "@/components/ui/ConfirmModal";
+import { usePermissions } from "@/hooks/usePermissions";
 
 interface AppointmentDetailsModalProps {
   appointmentId: string;
@@ -42,6 +43,9 @@ export default function AppointmentDetailsModal({
   onSuccess,
   canEdit = false
 }: AppointmentDetailsModalProps) {
+  const { hasPermission, loading: permsLoading } = usePermissions();
+  
+  const canLiquidar = hasPermission("invoices:manage");
   const [appointment, setAppointment] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -222,13 +226,15 @@ export default function AppointmentDetailsModal({
                                             <Edit3 size={18} />
                                             Editar
                                         </button>
-                                        <button 
-                                            onClick={() => setShowLiquidation(true)}
-                                            className="flex-1 flex items-center justify-center gap-2 py-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-emerald-400 font-bold hover:bg-emerald-500/20 transition-all active:scale-[0.98]"
-                                        >
-                                            <Receipt size={18} />
-                                            Liquidar
-                                        </button>
+                                        {canLiquidar && (
+                                            <button 
+                                                onClick={() => setShowLiquidation(true)}
+                                                className="flex-1 flex items-center justify-center gap-2 py-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-emerald-400 font-bold hover:bg-emerald-500/20 transition-all active:scale-[0.98]"
+                                            >
+                                                <Receipt size={18} />
+                                                Liquidar
+                                            </button>
+                                        )}
                                         <button 
                                             onClick={() => setShowConfirmCancel(true)}
                                             className="w-14 h-14 flex items-center justify-center rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 transition-all active:scale-[0.98]"

@@ -32,20 +32,19 @@ api.interceptors.response.use(
         return response;
     },
     (error) => {
-        // 401: No autorizado (Token expirado o inválido)
-        // 403: Prohibido (No tiene permisos para la acción)
-        if (error.response?.status === 401 || error.response?.status === 403) {
-            // Evitamos cerrar sesión si ya estamos en el login
+        // 401: No autorizado (Token expirado o inválido) -> Redirigir al login
+        if (error.response?.status === 401) {
             const isLoginPath = window.location.pathname.includes("/login");
-            
             if (!isLoginPath) {
-                // 1. Limpiar almacenamiento de sesión
                 sessionStorage.removeItem("token");
                 sessionStorage.removeItem("user");
-                
-                // 2. Redirigir al login con un parámetro informando la expiración
                 window.location.href = "/login?expired=true";
             }
+        }
+
+        // 403: Prohibido (No tiene permisos) -> Solo informar, NO cerrar sesión
+        if (error.response?.status === 403) {
+            toast.error("No tienes permisos suficientes para realizar esta acción.");
         }
         
         return Promise.reject(error);

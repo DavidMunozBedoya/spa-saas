@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { Clock, User } from "lucide-react";
+import { Clock } from "lucide-react";
 
 interface Appointment {
   id: string;
@@ -22,13 +22,15 @@ interface AvailabilityTimelineProps {
   appointments: Appointment[];
   onSelectSlot: (staffId: string, time: string) => void;
   selectedDate: string; // YYYY-MM-DD
+  hasCreatePermission?: boolean;
 }
 
 export default function AvailabilityTimeline({ 
   staff, 
   appointments, 
   onSelectSlot,
-  selectedDate 
+  selectedDate,
+  hasCreatePermission = false
 }: AvailabilityTimelineProps) {
   
   // Timeline starts at 8:00 AM and ends at 8:00 PM (12 hours)
@@ -97,27 +99,32 @@ export default function AvailabilityTimeline({
                    </span>
                 </div>
 
-                <div className="flex-1 h-12 bg-foreground/5 rounded-2xl relative border border-foreground/5 group-hover/row:border-foreground/10 transition-all overflow-hidden">
+                <div className={cn(
+                  "flex-1 h-12 bg-foreground/5 rounded-2xl relative border border-foreground/5 group-hover/row:border-foreground/10 transition-all overflow-hidden",
+                  !hasCreatePermission && "cursor-default"
+                )}>
                    {/* Background Clickable Area (to select free slots) */}
-                   <div 
-                    className="absolute inset-0 z-0 cursor-crosshair"
-                    onClick={(e) => {
-                      const rect = e.currentTarget.getBoundingClientRect();
-                      const x = e.clientX - rect.left;
-                      const hourPos = (x / rect.width) * (END_HOUR - START_HOUR);
-                      
-                      const selectedHour = Math.floor(START_HOUR + hourPos);
-                      // Snap to 30 mins
-                      const mins = hourPos % 1 >= 0.5 ? 30 : 0;
-                      
-                      const d = new Date(selectedDate);
-                      d.setHours(selectedHour, mins, 0, 0);
-                      
-                      // Format to YYYY-MM-DDTHH:mm for input datetime-local
-                      const formatted = d.toLocaleString('sv-SE').slice(0, 16).replace(' ', 'T');
-                      onSelectSlot(member.id, formatted);
-                    }}
-                   />
+                   {hasCreatePermission && (
+                     <div 
+                      className="absolute inset-0 z-0 cursor-crosshair"
+                      onClick={(e) => {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const x = e.clientX - rect.left;
+                        const hourPos = (x / rect.width) * (END_HOUR - START_HOUR);
+                        
+                        const selectedHour = Math.floor(START_HOUR + hourPos);
+                        // Snap to 30 mins
+                        const mins = hourPos % 1 >= 0.5 ? 30 : 0;
+                        
+                        const d = new Date(selectedDate);
+                        d.setHours(selectedHour, mins, 0, 0);
+                        
+                        // Format to YYYY-MM-DDTHH:mm for input datetime-local
+                        const formatted = d.toLocaleString('sv-SE').slice(0, 16).replace(' ', 'T');
+                        onSelectSlot(member.id, formatted);
+                      }}
+                     />
+                   )}
 
                    {/* Appointments Blocks */}
                    {appointments
@@ -166,10 +173,12 @@ export default function AvailabilityTimeline({
              <div className="w-2 h-2 rounded-full bg-emerald-500" />
              <span className="text-[9px] font-black text-muted-foreground-auto uppercase tracking-widest">Completado</span>
           </div>
-          <div className="flex items-center gap-2">
-             <div className="w-2 h-2 rounded-full border border-dashed border-foreground/20" />
-             <span className="text-[9px] font-black text-muted-foreground-auto uppercase tracking-widest">Click zona vacía para agendar</span>
-          </div>
+          {hasCreatePermission && (
+            <div className="flex items-center gap-2">
+               <div className="w-2 h-2 rounded-full border border-dashed border-foreground/20" />
+               <span className="text-[9px] font-black text-muted-foreground-auto uppercase tracking-widest">Click zona vacía para agendar</span>
+            </div>
+          )}
       </div>
     </div>
   );
