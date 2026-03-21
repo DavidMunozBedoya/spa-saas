@@ -7,7 +7,7 @@ import {
   Plus, 
   Search, 
   Pencil, 
-  Trash2, 
+  Archive, 
   Loader2, 
   Mail, 
   Phone,
@@ -35,8 +35,8 @@ export default function StaffPage() {
   const [editingStaff, setEditingStaff] = useState<any | null>(null);
   const [viewingStaff, setViewingStaff] = useState<any | null>(null);
   
-  const [staffToDelete, setStaffToDelete] = useState<{id: string, name: string} | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [staffToArchive, setStaffToArchive] = useState<{id: string, name: string} | null>(null);
+  const [isArchiving, setIsArchiving] = useState(false);
 
   const { hasPermission } = usePermissions();
   const hasManageStaff = hasPermission("staff:manage");
@@ -44,7 +44,7 @@ export default function StaffPage() {
   const fetchStaff = async () => {
     try {
       setIsLoading(true);
-      const response = await api.get(`/staff?includeInactive=${showInactive}`);
+      const response = await api.get("/staff", { params: { includeArchived: "true" } });
       setStaffList(response.data);
     } catch (error: any) {
       toast.error(error.response?.data?.error || "Error al cargar el personal");
@@ -57,33 +57,33 @@ export default function StaffPage() {
     fetchStaff();
   }, [showInactive]);
 
-  const handleDeleteRequest = (id: string, name: string) => {
-    setStaffToDelete({ id, name });
+  const handleArchiveRequest = (id: string, name: string) => {
+    setStaffToArchive({ id, name });
   };
 
-  const handleReactivate = async (id: string) => {
+  const handleRestore = async (id: string) => {
     try {
-      await api.patch(`/staff/${id}/reactivate`, {});
-      toast.success("Empleado reactivado exitosamente");
+      await api.patch(`/staff/${id}/restore`, {});
+      toast.success("Empleado restaurado exitosamente");
       fetchStaff();
     } catch (error: any) {
-      toast.error(error.response?.data?.error || "Error al reactivar al empleado");
+      toast.error(error.response?.data?.error || "Error al restaurar al empleado");
     }
   };
 
-  const executeDelete = async () => {
-    if (!staffToDelete) return;
-    setIsDeleting(true);
+  const executeArchive = async () => {
+    if (!staffToArchive) return;
+    setIsArchiving(true);
     
     try {
-      await api.delete(`/staff/${staffToDelete.id}`);
-      toast.success("Miembro del personal desactivado exitosamente");
-      setStaffToDelete(null);
+      await api.delete(`/staff/${staffToArchive.id}`);
+      toast.success("Miembro del personal archivado exitosamente");
+      setStaffToArchive(null);
       fetchStaff();
     } catch (error: any) {
-      toast.error(error.response?.data?.error || "Error al eliminar al empleado");
+      toast.error(error.response?.data?.error || "Error al archivar al empleado");
     } finally {
-      setIsDeleting(false);
+      setIsArchiving(false);
     }
   };
 
@@ -103,10 +103,10 @@ export default function StaffPage() {
     setIsDetailsOpen(true);
   };
 
-  const handleDeleteFromDetails = () => {
+  const handleArchiveFromDetails = () => {
     if (viewingStaff) {
       setIsDetailsOpen(false);
-      handleDeleteRequest(viewingStaff.id, viewingStaff.full_name);
+      handleArchiveRequest(viewingStaff.id, viewingStaff.full_name);
     }
   };
 
@@ -115,7 +115,7 @@ export default function StaffPage() {
       (s.email || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
       (s.phone || "").toLowerCase().includes(searchQuery.toLowerCase());
     
-    const matchesStatus = showInactive ? true : s.active === true;
+    const matchesStatus = showInactive ? s.active === false : s.active === true;
 
     return matchesSearch && matchesStatus;
   });
@@ -150,14 +150,14 @@ export default function StaffPage() {
             
             <button 
               onClick={() => setShowInactive(!showInactive)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border transition-all font-medium text-[10px] uppercase tracking-widest ${
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border transition-all font-bold text-xs uppercase tracking-widest ${
                 showInactive 
-                ? 'bg-primary/20 border-primary text-primary' 
-                : 'bg-foreground/5 border-foreground/10 text-foreground/50 hover:bg-foreground/10'
+                ? 'bg-amber-500/10 border-amber-500/20 text-amber-500' 
+                : 'bg-foreground/5 border-foreground/10 text-foreground/60 hover:bg-foreground/10'
               }`}
             >
-              {showInactive ? <Eye size={18} /> : <EyeOff size={18} />}
-              {showInactive ? "Viendo Todo" : "Ver Eliminados"}
+              <Archive size={16} />
+              {showInactive ? "Ver Activos" : "Ver Archivados"}
             </button>
 
             {hasManageStaff && (
@@ -214,17 +214,20 @@ export default function StaffPage() {
                     <tr 
                       key={staff.id} 
                       onClick={() => handleViewDetails(staff)}
-                      className="group hover:bg-foreground/5 transition-colors cursor-pointer"
+                      className={`group transition-colors cursor-pointer ${!staff.active ? 'bg-amber-500/5 hover:bg-amber-500/10' : 'hover:bg-foreground/5'}`}
                     >
-                      <td className="p-4 pl-6">
+                      <td className="p-4 pl-6 relative">
+                        {!staff.active && (
+                           <div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-500/50" />
+                        )}
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-primary font-bold shrink-0">
+                          <div className={`w-10 h-10 rounded-full border flex items-center justify-center font-bold shrink-0 ${!staff.active ? 'bg-amber-500/20 border-amber-500/30 text-amber-500' : 'bg-primary/20 border-primary/30 text-primary'}`}>
                             {staff.full_name.charAt(0).toUpperCase()}
                           </div>
                           <div className="min-w-0">
-                            <p className="font-bold text-foreground truncate">{staff.full_name}</p>
-                            <p className="text-[10px] text-foreground/50 mt-0.5 truncate flex items-center gap-1">
-                              <span className="border border-foreground/10 bg-foreground/5 px-1.5 py-0.5 rounded text-[10px] font-bold uppercase">ID</span>
+                            <p className={`font-bold truncate ${!staff.active ? 'text-amber-500' : 'text-foreground'}`}>{staff.full_name}</p>
+                            <p className={`text-[10px] mt-0.5 truncate flex items-center gap-1 ${!staff.active ? 'text-amber-500/70' : 'text-foreground/50'}`}>
+                              <span className={`border px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${!staff.active ? 'border-amber-500/20 bg-amber-500/10' : 'border-foreground/10 bg-foreground/5'}`}>ID</span>
                               {staff.identification_number}
                             </p>
                           </div>
@@ -253,10 +256,10 @@ export default function StaffPage() {
                         <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
                           staff.active 
                           ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' 
-                          : 'bg-red-500/10 text-red-500 border border-red-500/20'
+                          : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
                         }`}>
-                          {staff.active ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
-                          {staff.active ? 'Activo' : 'Inactivo'}
+                          {staff.active ? <CheckCircle2 size={12} /> : <Archive size={12} />}
+                          {staff.active ? 'Activo' : 'Archivado'}
                         </div>
                       </td>
                       <td className="p-4 pr-6 text-right">
@@ -264,12 +267,12 @@ export default function StaffPage() {
                           <div className="flex items-center justify-end gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                             {!staff.active ? (
                               <button 
-                                onClick={(e) => { e.stopPropagation(); handleReactivate(staff.id); }} 
-                                className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 rounded-lg transition-colors text-[10px] font-black uppercase tracking-widest" 
-                                title="Reactivar"
+                                onClick={(e) => { e.stopPropagation(); handleRestore(staff.id); }} 
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 rounded-lg transition-colors text-[10px] font-black uppercase tracking-widest" 
+                                title="Restaurar"
                               >
                                 <RefreshCcw size={14} />
-                                Reactivar
+                                Restaurar
                               </button>
                             ) : (
                               <>
@@ -281,11 +284,11 @@ export default function StaffPage() {
                                   <Pencil size={16} />
                                 </button>
                                 <button 
-                                  onClick={(e) => { e.stopPropagation(); handleDeleteRequest(staff.id, staff.full_name); }} 
-                                  className="p-2 text-foreground/40 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors" 
-                                  title="Eliminar"
+                                  onClick={(e) => { e.stopPropagation(); handleArchiveRequest(staff.id, staff.full_name); }} 
+                                  className="p-2 text-foreground/40 hover:text-amber-500 hover:bg-amber-500/10 rounded-lg transition-colors" 
+                                  title="Archivar"
                                 >
-                                  <Trash2 size={16} />
+                                  <Archive size={16} />
                                 </button>
                               </>
                             )}
@@ -304,10 +307,10 @@ export default function StaffPage() {
           <StaffDetailsModal 
             member={viewingStaff}
             onClose={() => setIsDetailsOpen(false)}
-            onEdit={hasManageStaff ? () => handleEdit(viewingStaff) : undefined}
-            onDelete={hasManageStaff ? handleDeleteFromDetails : undefined}
-            onReactivate={hasManageStaff ? async () => {
-              await handleReactivate(viewingStaff.id);
+            onEdit={hasManageStaff && viewingStaff.active ? () => handleEdit(viewingStaff) : undefined}
+            onArchive={hasManageStaff && viewingStaff.active ? handleArchiveFromDetails : undefined}
+            onRestore={hasManageStaff && !viewingStaff.active ? async () => {
+              await handleRestore(viewingStaff.id);
               setIsDetailsOpen(false);
             } : undefined}
           />
@@ -325,14 +328,14 @@ export default function StaffPage() {
           />
         )}
 
-        {/* Confirm Delete Modal */}
+        {/* Confirm Archive Modal */}
         <ConfirmModal
-          isOpen={!!staffToDelete}
-          onClose={() => setStaffToDelete(null)}
-          onConfirm={executeDelete}
-          title="Desactivar Empleado"
-          description={`¿Estás seguro de que deseas desactivar a "${staffToDelete?.name}"? Esta acción lo removerá de las opciones pero preservará su historial.`}
-          isProcessing={isDeleting}
+          isOpen={!!staffToArchive}
+          onClose={() => setStaffToArchive(null)}
+          onConfirm={executeArchive}
+          title="Archivar Empleado"
+          description={`¿Estás seguro de que deseas archivar a "${staffToArchive?.name}"? Esta acción lo removerá de las opciones pero preservará su historial.`}
+          isProcessing={isArchiving}
         />
 
       </div>

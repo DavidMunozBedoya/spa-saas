@@ -1,14 +1,14 @@
-import { X, Mail, Phone, Pencil, Trash2, CheckCircle2, XCircle, RefreshCcw } from "lucide-react";
+import { X, Mail, Phone, Pencil, Archive, CheckCircle2, RefreshCcw } from "lucide-react";
 
 interface StaffDetailsModalProps {
   member: any;
   onClose: () => void;
   onEdit?: () => void;
-  onDelete?: () => void;
-  onReactivate?: () => void;
+  onArchive?: () => void;
+  onRestore?: () => void;
 }
 
-export default function StaffDetailsModal({ member, onClose, onEdit, onDelete, onReactivate }: StaffDetailsModalProps) {
+export default function StaffDetailsModal({ member, onClose, onEdit, onArchive, onRestore }: StaffDetailsModalProps) {
   if (!member) return null;
 
   return (
@@ -39,10 +39,10 @@ export default function StaffDetailsModal({ member, onClose, onEdit, onDelete, o
             <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold mt-2 ${
               member.active 
               ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' 
-              : 'bg-red-500/10 text-red-500 border border-red-500/20'
+              : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
             }`}>
-              {member.active ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
-              {member.active ? 'Activo' : 'Inactivo'}
+              {member.active ? <CheckCircle2 size={12} /> : <Archive size={12} />}
+              {member.active ? 'Activo' : 'Archivado'}
             </div>
           </div>
 
@@ -76,22 +76,22 @@ export default function StaffDetailsModal({ member, onClose, onEdit, onDelete, o
         </div>
 
         <div className="p-6 border-t border-foreground/10 bg-foreground/5 flex flex-col-reverse sm:flex-row gap-3 relative z-10 shrink-0">
-          {onDelete && member.active && (
+          {onArchive && member.active && (
             <button 
-              onClick={onDelete}
-              className="flex-1 flex items-center justify-center gap-2 py-3 bg-red-500/10 text-red-400 hover:bg-red-500/20 font-bold rounded-xl transition-all"
+              onClick={onArchive}
+              className="flex-1 flex items-center justify-center gap-2 py-3 bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 font-bold rounded-xl transition-all"
             >
-              <Trash2 size={18} />
-              Desactivar
+              <Archive size={18} />
+              Archivar
             </button>
           )}
-          {onReactivate && !member.active && (
+          {onRestore && !member.active && (
             <button 
-              onClick={onReactivate}
-              className="flex-1 flex items-center justify-center gap-2 py-3 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 font-bold rounded-xl transition-all"
+              onClick={onRestore}
+              className="flex-1 flex items-center justify-center gap-2 py-3 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 font-bold rounded-xl transition-all"
             >
               <RefreshCcw size={18} />
-              Reactivar
+              Restaurar
             </button>
           )}
           {onEdit && member.active && (

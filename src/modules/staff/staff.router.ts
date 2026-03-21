@@ -15,6 +15,6 @@ router.get("/therapists", authorizePermission("staff:view"), staffController.get
 router.get("/:id", authorizePermission("staff:view"), staffController.getById);
 router.patch("/:id", authorizePermission("staff:manage"), validate(UpdateStaffSchema), staffController.update);
 router.delete("/:id", authorizePermission("staff:manage"), staffController.delete);
-router.patch("/:id/reactivate", authorizePermission("staff:manage"), staffController.reactivate);
+router.patch("/:id/restore", authorizePermission("staff:manage"), staffController.restore);
 
 export default router;

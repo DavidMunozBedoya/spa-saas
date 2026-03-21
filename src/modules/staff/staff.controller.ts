@@ -42,18 +42,18 @@ export class StaffController {
     }
 
     /**
-     * Lista todos los miembros del personal de un Spa específico.
+     * Lista todos los miembros del personal de un Spa específico (incluye archivados si se solicita).
      */
     async getBySpa(req: Request, res: Response) {
         try {
             const user = (req as AuthRequest).user;
             const spaId = user?.spaId;
-            const includeInactive = req.query.includeInactive === "true";
+            const includeArchived = req.query.includeArchived === "true";
             const hasViewAll = user?.permissions?.includes("staff:view-all");
 
             const filterId = !hasViewAll ? (user?.staffId as string) : undefined;
 
-            const staff = await staffService.getBySpa(spaId as string, includeInactive, filterId);
+            const staff = await staffService.getBySpa(spaId as string, includeArchived, filterId);
             return res.json(staff);
         } catch (error: any) {
             return res.status(500).json({ error: error.message });
@@ -92,7 +92,7 @@ export class StaffController {
     }
 
     /**
-     * Realiza un borrado lógico de un miembro del personal.
+     * Archiva (borrado lógico) de un miembro del personal.
      */
     async delete(req: Request, res: Response) {
         try {
@@ -101,23 +101,23 @@ export class StaffController {
             const spaId = user?.spaId;
             const member = await staffService.softDeleteStaff(id as string, spaId as string);
             if (!member) return res.status(404).json({ error: "Miembro del personal no encontrado" });
-            return res.json({ message: "Miembro del personal eliminado lógicamente", member });
+            return res.json({ message: "Personal archivado exitosamente", member });
         } catch (error: any) {
             return res.status(500).json({ error: error.message });
         }
     }
 
     /**
-     * Reactiva un miembro del personal.
+     * Restaura un miembro del personal archivado.
      */
-    async reactivate(req: Request, res: Response) {
+    async restore(req: Request, res: Response) {
         try {
             const { id } = req.params;
             const user = (req as AuthRequest).user;
             const spaId = user?.spaId;
-            const member = await staffService.reactivateStaff(id as string, spaId as string);
+            const member = await staffService.restoreStaff(id as string, spaId as string);
             if (!member) return res.status(404).json({ error: "Miembro del personal no encontrado" });
-            return res.json({ message: "Miembro del personal reactivado exitosamente", member });
+            return res.json({ message: "Personal restaurado exitosamente", member });
         } catch (error: any) {
             return res.status(500).json({ error: error.message });
         }
