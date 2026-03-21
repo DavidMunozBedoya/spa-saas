@@ -6,8 +6,8 @@ import {
   Building2, 
   Plus, 
   MoreVertical, 
-  Power, 
-  Trash2, 
+  RefreshCcw, 
+  Archive, 
   Search,
   Filter,
   CheckCircle2,
@@ -42,8 +42,9 @@ export default function ManageSpasPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSpa, setEditingSpa] = useState<Spa | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
-  const [spaToDelete, setSpaToDelete] = useState<string | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [showInactive, setShowInactive] = useState(false);
+  const [spaToArchive, setSpaToArchive] = useState<string | null>(null);
+  const [isArchiving, setIsArchiving] = useState(false);
   const [editForm, setEditForm] = useState({
     name: "",
     email: "",
@@ -53,7 +54,7 @@ export default function ManageSpasPage() {
 
   const fetchSpas = async () => {
     try {
-      const response = await api.get("/platform/spas");
+      const response = await api.get("/platform/spas", { params: { includeArchived: "true" } });
       setSpas(response.data);
     } catch (error) {
       console.error("Error fetching spas:", error);
@@ -67,43 +68,47 @@ export default function ManageSpasPage() {
     fetchSpas();
   }, []);
 
-  const handleToggleStatus = async (spa: Spa) => {
+  const handleRestore = async (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     try {
-      await api.patch(`/platform/spas/${spa.id}/status`, { active: !spa.active });
-      toast.success(`Spa ${spa.active ? 'desactivado' : 'activado'} correctamente`);
+      await api.patch(`/platform/spas/${id}/restore`);
+      toast.success("Spa restaurado correctamente");
       fetchSpas();
     } catch (error) {
-      toast.error("Error al cambiar el estado del Spa");
+      toast.error("Error al restaurar el Spa");
     }
   };
 
-  const handleDelete = async () => {
-    if (!spaToDelete) return;
-    setIsDeleting(true);
+  const executeArchive = async () => {
+    if (!spaToArchive) return;
+    setIsArchiving(true);
     try {
-      await api.delete(`/platform/spas/${spaToDelete}`);
-      toast.success("Spa eliminado correctamente");
-      setSpas(prev => prev.filter(spa => spa.id !== spaToDelete));
-      setSpaToDelete(null);
+      await api.delete(`/platform/spas/${spaToArchive}`);
+      toast.success("Spa archivado correctamente");
+      setSpas(prev => prev.map(spa => spa.id === spaToArchive ? { ...spa, active: false } : spa));
+      setSpaToArchive(null);
     } catch (error) {
-      toast.error("Error al eliminar el Spa");
+      toast.error("Error al archivar el Spa");
     } finally {
-      setIsDeleting(false);
+      setIsArchiving(false);
     }
   };
 
-  const confirmDelete = (id: string) => {
-    setSpaToDelete(id);
+  const confirmArchive = (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setSpaToArchive(id);
   };
 
   const openEditModal = (spa: Spa) => {
     setEditingSpa(spa);
   };
 
-  const filteredSpas = spas.filter(spa => 
-    spa.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    spa.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredSpas = spas.filter(spa => {
+    const matchesSearch = spa.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          spa.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = showInactive ? spa.active === false : spa.active === true;
+    return matchesSearch && matchesStatus;
+  });
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -125,11 +130,22 @@ export default function ManageSpasPage() {
               className="pl-10 pr-4 py-3 bg-foreground/5 border border-foreground/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all w-80 text-sm text-foreground"
             />
           </div>
+            <button
+              onClick={() => setShowInactive(!showInactive)}
+              className={`flex items-center gap-2 px-4 py-3 rounded-xl border text-xs font-bold uppercase tracking-widest transition-all ${
+                showInactive 
+                  ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' 
+                  : 'bg-foreground/5 text-foreground/60 border-foreground/10 hover:bg-foreground/10'
+              }`}
+            >
+              <Archive size={16} />
+              {showInactive ? "Ver Activos" : "Ver Archivados"}
+            </button>
           <button 
             onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-2 px-5 py-3 bg-primary text-primary-foreground font-bold rounded-xl shadow-lg shadow-primary/20 hover:brightness-110 active:scale-[0.98] transition-all"
+            className="flex items-center gap-2 px-5 py-3 bg-primary text-primary-foreground font-bold rounded-xl shadow-lg shadow-primary/20 hover:brightness-110 active:scale-[0.98] transition-all uppercase tracking-widest text-xs"
           >
-            <Plus size={20} />
+            <Plus size={18} />
             Nuevo Spa
           </button>
         </div>
@@ -168,15 +184,15 @@ export default function ManageSpasPage() {
                 </tr>
               ) : (
                 filteredSpas.map((spa) => (
-                  <tr key={spa.id} className="hover:bg-foreground/[0.02] transition-colors group">
+                  <tr key={spa.id} className={`hover:bg-foreground/[0.02] transition-colors group relative ${!spa.active ? 'bg-amber-500/5 hover:bg-amber-500/10' : ''}`}>
                     <td className="px-6 py-5">
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
+                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center border ${!spa.active ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' : 'bg-primary/10 text-primary border-primary/20'}`}>
                           <Building2 size={24} />
                         </div>
-                        <div>
-                          <p className="text-foreground font-bold group-hover:text-primary transition-colors">{spa.name}</p>
-                          <p className="text-foreground/40 text-xs">ID: {spa.id.substring(0, 8)}...</p>
+                        <div className="min-w-0">
+                          <p className={`font-bold transition-colors truncate ${!spa.active ? 'text-amber-500' : 'text-foreground group-hover:text-primary'}`}>{spa.name}</p>
+                          <p className={`text-xs truncate ${!spa.active ? 'text-amber-500/50' : 'text-foreground/40'}`}>ID: {spa.id.substring(0, 8)}...</p>
                         </div>
                       </div>
                     </td>
@@ -188,42 +204,44 @@ export default function ManageSpasPage() {
                       {new Date(spa.created_at).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-5">
-                      <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold ${
+                      <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] uppercase tracking-widest font-black ${
                         spa.active 
                         ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' 
-                        : 'bg-red-500/10 text-red-500 border border-red-500/20'
+                        : 'bg-amber-500/10 text-amber-500 border border-amber-500/20'
                       }`}>
-                        {spa.active ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
-                        {spa.active ? 'Activo' : 'Suspendido'}
+                        {spa.active ? <CheckCircle2 size={12} /> : <Archive size={12} />}
+                        {spa.active ? 'Activo' : 'Archivado'}
                       </div>
                     </td>
                     <td className="px-6 py-5 text-right">
-                      <div className="flex justify-end gap-2">
-                        <button 
-                          onClick={() => openEditModal(spa)}
-                          title="Editar Spa"
-                          className="p-2.5 text-foreground/40 border border-foreground/10 hover:bg-foreground/5 hover:text-foreground rounded-xl transition-all"
-                        >
-                          <Edit2 size={18} />
-                        </button>
-                        <button 
-                          onClick={() => handleToggleStatus(spa)}
-                          title={spa.active ? 'Desactivar Spa' : 'Activar Spa'}
-                          className={`p-2.5 rounded-xl border transition-all ${
-                            spa.active 
-                            ? 'text-red-400 border-red-500/10 hover:bg-red-500/10 hover:border-red-500/20' 
-                            : 'text-emerald-400 border-emerald-500/10 hover:bg-emerald-500/10 hover:border-emerald-500/20'
-                          }`}
-                        >
-                          <Power size={18} />
-                        </button>
-                        <button 
-                          onClick={() => confirmDelete(spa.id)}
-                          title="Eliminar (Soft Delete)"
-                          className="p-2.5 text-foreground/40 border border-foreground/10 hover:bg-foreground/5 hover:text-foreground rounded-xl transition-all"
-                        >
-                          <Trash2 size={18} />
-                        </button>
+                      <div className="flex justify-end gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                        {!spa.active ? (
+                          <button 
+                            onClick={(e) => handleRestore(spa.id, e)}
+                            title="Restaurar Spa"
+                            className="flex items-center gap-2 px-3 py-1.5 uppercase tracking-widest text-[10px] font-black bg-amber-500/10 text-amber-500 border border-amber-500/20 hover:bg-amber-500/20 rounded-xl transition-all"
+                          >
+                            <RefreshCcw size={14} />
+                            Restaurar
+                          </button>
+                        ) : (
+                          <>
+                            <button 
+                              onClick={() => openEditModal(spa)}
+                              title="Editar Spa"
+                              className="p-2.5 text-foreground/40 border border-foreground/10 hover:bg-foreground/5 hover:text-foreground rounded-xl transition-all"
+                            >
+                              <Edit2 size={18} />
+                            </button>
+                            <button 
+                              onClick={(e) => confirmArchive(spa.id, e)}
+                              title="Archivar Spa"
+                              className="p-2.5 text-foreground/40 border border-foreground/10 hover:bg-amber-500/10 hover:text-amber-500 hover:border-amber-500/20 rounded-xl transition-all"
+                            >
+                              <Archive size={18} />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -240,14 +258,14 @@ export default function ManageSpasPage() {
         onSuccess={fetchSpas}
       />
 
-      {/* Confirm Delete Modal */}
+      {/* Confirm Archive Modal */}
       <ConfirmModal
-        isOpen={!!spaToDelete}
-        onClose={() => setSpaToDelete(null)}
-        onConfirm={handleDelete}
-        title="Eliminar Spa"
-        description="¿Estás seguro de que deseas eliminar este Spa? Se realizará un Soft Delete, pero el Spa perderá acceso a la plataforma."
-        isProcessing={isDeleting}
+        isOpen={!!spaToArchive}
+        onClose={() => setSpaToArchive(null)}
+        onConfirm={executeArchive}
+        title="Archivar Spa"
+        description="¿Estás seguro de que deseas archivar este Spa? El Spa se ocultará de la lista principal y perderá acceso a la plataforma temporalmente."
+        isProcessing={isArchiving}
       />
 
       {/* Edit Spa Modal */}

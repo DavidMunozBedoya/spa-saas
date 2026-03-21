@@ -1,76 +1,48 @@
-import pool from "../../config/db.js";
 import { CreateSpaInput, UpdateSpaInput } from "./spa.schema.js";
+import { SpaRepository } from "./spa.repository.js";
+
+const repository = new SpaRepository();
 
 export class SpaService {
     /**
      * Crea un nuevo registro de Spa en la base de datos.
      */
     async createSpa(data: CreateSpaInput) {
-        const { name, email, phone, timezone } = data;
-
-        const result = await pool.query(
-            `INSERT INTO spas (name, email, phone, timezone) 
-       VALUES ($1, $2, $3, $4) 
-       RETURNING *`,
-            [name, email, phone, timezone || 'UTC']
-        );
-
-        return result.rows[0];
+        return repository.create(data);
     }
 
     /**
-     * Obtiene todos los Spas que están activos.
+     * Obtiene todos los Spas. Puede incluir inactivos (archivados).
      */
-    async getAllSpas() {
-        const result = await pool.query("SELECT * FROM spas WHERE active = true ORDER BY created_at DESC");
-        return result.rows;
+    async getAllSpas(includeArchived: boolean = false) {
+        return repository.findAll(includeArchived);
     }
 
     /**
      * Actualiza campos específicos de un Spa de forma dinámica.
      */
     async updateSpa(id: string, data: UpdateSpaInput) {
-        const fields = Object.keys(data).filter(key => (data as any)[key] !== undefined);
-        if (fields.length === 0) return this.getSpaById(id);
-
-        const setClause = fields.map((key, index) => `${key} = $${index + 2}`).join(", ");
-        const values = fields.map(key => (data as any)[key]);
-
-        const result = await pool.query(
-            `UPDATE spas SET ${setClause} WHERE id = $1 AND active = true RETURNING *`,
-            [id, ...values]
-        );
-
-        return result.rows[0];
+        return repository.update(id, data);
     }
 
     /**
      * Busca un Spa específico por su ID único.
      */
     async getSpaById(id: string) {
-        const result = await pool.query("SELECT * FROM spas WHERE id = $1 AND active = true", [id]);
-        return result.rows[0];
+        return repository.findById(id);
     }
 
     /**
-     * Desactiva un Spa (borrado lógico) cambiando su estado 'active' a false.
+     * Desactiva un Spa (borrado lógico / archivarlo).
      */
     async softDeleteSpa(id: string) {
-        const result = await pool.query(
-            "UPDATE spas SET active = false WHERE id = $1 RETURNING *",
-            [id]
-        );
-        return result.rows[0];
+        return repository.softDelete(id);
     }
 
     /**
-     * Reactiva un Spa desactivado.
+     * Restaura un Spa desactivado (archivado).
      */
-    async reactivateSpa(id: string) {
-        const result = await pool.query(
-            "UPDATE spas SET active = true WHERE id = $1 RETURNING *",
-            [id]
-        );
-        return result.rows[0];
+    async restoreSpa(id: string) {
+        return repository.restoreById(id);
     }
 }

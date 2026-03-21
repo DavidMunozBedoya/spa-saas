@@ -19,11 +19,12 @@ export class SpaController {
     }
 
     /**
-     * Obtiene todos los Spas activos.
+     * Obtiene todos los Spas administrados, opcionalmente incluyendo archivados.
      */
     async getAll(req: Request, res: Response) {
         try {
-            const spas = await spaService.getAllSpas();
+            const includeArchived = req.query.includeArchived === "true";
+            const spas = await spaService.getAllSpas(includeArchived);
             return res.json(spas);
         } catch (error: any) {
             return res.status(500).json({ error: error.message });
@@ -63,14 +64,14 @@ export class SpaController {
     }
 
     /**
-     * Realiza un borrado lógico de un Spa.
+     * Archiva (borrado lógico) un Spa.
      */
     async delete(req: Request, res: Response) {
         try {
             const { id } = req.params;
             const spa = await spaService.softDeleteSpa(id as string);
             if (!spa) return res.status(404).json({ error: "Spa no encontrado" });
-            return res.json({ message: "Spa eliminado lógicamente", spa });
+            return res.json({ message: "Spa archivado exitosamente", spa });
         } catch (error: any) {
             return res.status(500).json({ error: error.message });
         }
@@ -110,14 +111,14 @@ export class SpaController {
     }
 
     /**
-     * Reactiva un Spa.
+     * Restaura (reactiva) un Spa archivado.
      */
-    async reactivate(req: Request, res: Response) {
+    async restore(req: Request, res: Response) {
         try {
             const { id } = req.params;
-            const spa = await spaService.reactivateSpa(id as string);
+            const spa = await spaService.restoreSpa(id as string);
             if (!spa) return res.status(404).json({ error: "Spa no encontrado" });
-            return res.json({ message: "Spa reactivado exitosamente", spa });
+            return res.json({ message: "Spa restaurado exitosamente", spa });
         } catch (error: any) {
             return res.status(500).json({ error: error.message });
         }

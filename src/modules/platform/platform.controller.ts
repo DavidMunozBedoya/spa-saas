@@ -8,9 +8,10 @@ export class PlatformController {
     /**
      * Obtiene la lista completa de todos los Spas registrados en la plataforma.
      */
-    async getAllSpas(_req: Request, res: Response) {
+    async getAllSpas(req: Request, res: Response) {
         try {
-            const spas = await platformService.getAllSpas();
+            const includeArchived = req.query.includeArchived === "true";
+            const spas = await platformService.getAllSpas(includeArchived);
             return res.json(spas);
         } catch (error: any) {
             return res.status(500).json({ error: error.message });
@@ -90,6 +91,16 @@ export class PlatformController {
         try {
             const { id } = req.params;
             const result = await platformService.deleteSpa(id as string);
+            return res.json(result);
+        } catch (error: any) {
+            return res.status(500).json({ error: error.message });
+        }
+    }
+
+    async restoreSpa(req: Request, res: Response) {
+        try {
+            const { id } = req.params;
+            const result = await platformService.restoreSpa(id as string);
             return res.json(result);
         } catch (error: any) {
             return res.status(500).json({ error: error.message });

@@ -17,6 +17,7 @@ router.post("/register", validate(RegisterSpaSchema), platformController.registe
 router.patch("/spas/:id", platformController.updateSpa);
 router.patch("/spas/:id/status", platformController.updateSpaStatus);
 router.delete("/spas/:id", platformController.deleteSpa);
+router.patch("/spas/:id/restore", platformController.restoreSpa);
 router.get("/stats", platformController.getStats);
 
 // Rutas de Gestión de Usuarios de Plataforma

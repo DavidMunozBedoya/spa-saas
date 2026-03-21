@@ -19,6 +19,6 @@ router.patch("/settings", authenticateToken, authorizePermission("spa:config"), 
 router.get("/:id", authenticateToken, authorizePermission("platform:manage"), spaController.getById);
 router.patch("/:id", authenticateToken, authorizePermission("platform:manage"), validate(UpdateSpaSchema), spaController.update);
 router.delete("/:id", authenticateToken, authorizePermission("platform:manage"), spaController.delete);
-router.patch("/:id/reactivate", authenticateToken, authorizePermission("platform:manage"), spaController.reactivate);
+router.patch("/:id/restore", authenticateToken, authorizePermission("platform:manage"), spaController.restore);
 
 export default router;

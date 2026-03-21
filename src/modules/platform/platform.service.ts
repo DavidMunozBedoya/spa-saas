@@ -2,12 +2,14 @@ import pool from "../../config/db.js";
 
 export class PlatformService {
     /**
-     * Consulta todos los Spas, incluyendo su estado de activación.
+     * Consulta todos los Spas, opcionalmente incluyendo archivados.
      */
-    async getAllSpas() {
-        const result = await pool.query(
-            "SELECT id, name, email, phone, timezone, active, created_at FROM spas WHERE deleted_at IS NULL ORDER BY created_at DESC"
-        );
+    async getAllSpas(includeArchived: boolean = false) {
+        const query = includeArchived
+            ? "SELECT id, name, email, phone, timezone, active, created_at FROM spas ORDER BY active DESC, created_at DESC"
+            : "SELECT id, name, email, phone, timezone, active, created_at FROM spas WHERE deleted_at IS NULL AND active = true ORDER BY created_at DESC";
+            
+        const result = await pool.query(query);
         return result.rows;
     }
 
@@ -137,6 +139,12 @@ export class PlatformService {
         // Soft Delete: Marcamos el registro como eliminado sin borrarlo físicamente.
         await pool.query('UPDATE spas SET deleted_at = NOW(), active = false WHERE id = $1', [id]);
         return { message: 'Spa eliminado (Soft Delete) correctamente' };
+    }
+
+    async restoreSpa(id: string) {
+        // Restaurar: Quitamos la marca de eliminado y lo reactivamos.
+        await pool.query('UPDATE spas SET deleted_at = NULL, active = true WHERE id = $1', [id]);
+        return { message: 'Spa restaurado correctamente' };
     }
 
     /**
