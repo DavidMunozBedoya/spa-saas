@@ -11,6 +11,7 @@ router.post("/", authorizePermission("services:manage"), validate(CreateServiceS
 router.get("/", authorizePermission("services:view"), serviceController.getBySpa);
 router.get("/:id", authorizePermission("services:view"), serviceController.getById);
 router.patch("/:id", authorizePermission("services:manage"), validate(UpdateServiceSchema), serviceController.update);
+router.patch("/:id/restore", authorizePermission("services:manage"), serviceController.restore);
 router.delete("/:id", authorizePermission("services:manage"), serviceController.delete);
 
 export default router;

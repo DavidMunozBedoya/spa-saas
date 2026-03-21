@@ -1,13 +1,14 @@
-import { X, Clock, DollarSign, AlignLeft, Pencil, Trash2 } from "lucide-react";
+import { X, Clock, DollarSign, AlignLeft, Pencil, Archive, RefreshCcw } from "lucide-react";
 
 interface ServiceDetailsModalProps {
   service: any;
   onClose: () => void;
   onEdit?: () => void;
-  onDelete?: () => void;
+  onArchive?: () => void;
+  onRestore?: () => void;
 }
 
-export default function ServiceDetailsModal({ service, onClose, onEdit, onDelete }: ServiceDetailsModalProps) {
+export default function ServiceDetailsModal({ service, onClose, onEdit, onArchive, onRestore }: ServiceDetailsModalProps) {
   if (!service) return null;
 
   const formatDuration = (minutes: number) => {
@@ -67,13 +68,22 @@ export default function ServiceDetailsModal({ service, onClose, onEdit, onDelete
         </div>
 
         <div className="p-6 border-t border-foreground/10 bg-foreground/5 flex flex-col-reverse sm:flex-row gap-3 relative z-10 shrink-0">
-          {onDelete && (
+          {onArchive && (
             <button 
-              onClick={onDelete}
-              className="flex-1 flex items-center justify-center gap-2 py-3 bg-red-500/10 text-red-400 hover:bg-red-500/20 font-bold rounded-xl transition-all"
+              onClick={onArchive}
+              className="flex-1 flex items-center justify-center gap-2 py-3 bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 font-bold rounded-xl transition-all"
             >
-              <Trash2 size={18} />
-              Eliminar
+              <Archive size={18} />
+              Archivar
+            </button>
+          )}
+          {onRestore && (
+            <button 
+              onClick={onRestore}
+              className="flex-1 flex items-center justify-center gap-2 py-3 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 font-bold rounded-xl transition-all"
+            >
+              <RefreshCcw size={18} />
+              Restaurar
             </button>
           )}
           {onEdit && (

@@ -7,9 +7,10 @@ import {
   Plus, 
   Search, 
   Pencil, 
-  Trash2, 
+  Archive, 
   Loader2, 
-  Clock, 
+  Clock,
+  RefreshCcw,
 } from "lucide-react";
 import { toast } from "sonner";
 import NewServiceModal from "@/components/dashboard/NewServiceModal";
@@ -27,8 +28,9 @@ export default function ServicesPage() {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [editingService, setEditingService] = useState<any | null>(null);
   const [viewingService, setViewingService] = useState<any | null>(null);
-  const [serviceToDelete, setServiceToDelete] = useState<{id: string, name: string} | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [serviceToArchive, setServiceToArchive] = useState<{id: string, name: string} | null>(null);
+  const [isArchiving, setIsArchiving] = useState(false);
+  const [showInactive, setShowInactive] = useState(false);
 
   const { hasPermission } = usePermissions();
   const hasManageServices = hasPermission("services:manage");
@@ -36,7 +38,7 @@ export default function ServicesPage() {
   const fetchServices = async () => {
     try {
       setIsLoading(true);
-      const response = await api.get("/services");
+      const response = await api.get("/services", { params: { includeArchived: "true" } });
       setServices(response.data);
     } catch (error: any) {
       toast.error(error.response?.data?.error || "Error al cargar los servicios");
@@ -49,23 +51,34 @@ export default function ServicesPage() {
     fetchServices();
   }, []);
 
-  const handleDeleteRequest = (id: string, name: string) => {
-    setServiceToDelete({ id, name });
+  const handleArchiveRequest = (id: string, name: string) => {
+    setServiceToArchive({ id, name });
   };
 
-  const executeDelete = async () => {
-    if (!serviceToDelete) return;
-    setIsDeleting(true);
+  const executeArchive = async () => {
+    if (!serviceToArchive) return;
+    setIsArchiving(true);
     
     try {
-      await api.delete(`/services/${serviceToDelete.id}`);
-      toast.success("Servicio eliminado exitosamente");
-      setServiceToDelete(null);
+      await api.delete(`/services/${serviceToArchive.id}`);
+      toast.success("Servicio archivado exitosamente");
+      setServiceToArchive(null);
       fetchServices();
     } catch (error: any) {
-      toast.error(error.response?.data?.error || "Error al eliminar el servicio");
+      toast.error(error.response?.data?.error || "Error al archivar el servicio");
     } finally {
-      setIsDeleting(false);
+      setIsArchiving(false);
+    }
+  };
+
+  const handleRestore = async (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    try {
+      await api.patch(`/services/${id}/restore`);
+      toast.success("Servicio restaurado exitosamente");
+      fetchServices();
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || "Error al restaurar el servicio");
     }
   };
 
@@ -85,10 +98,10 @@ export default function ServicesPage() {
     setIsDetailsOpen(true);
   };
 
-  const handleDeleteFromDetails = () => {
+  const handleArchiveFromDetails = () => {
     if (viewingService) {
       setIsDetailsOpen(false);
-      handleDeleteRequest(viewingService.id, viewingService.name);
+      handleArchiveRequest(viewingService.id, viewingService.name);
     }
   };
 
@@ -101,10 +114,16 @@ export default function ServicesPage() {
     return `${m} min`;
   };
 
-  const filteredServices = services.filter(s => 
-    s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (s.description || "").toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredServices = services.filter(s => {
+    const matchesSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          (s.description || "").toLowerCase().includes(searchQuery.toLowerCase());
+    
+    // showInactive = true -> solo mostrar active === false
+    // showInactive = false -> solo mostrar active === true
+    const matchesStatus = showInactive ? s.active === false : s.active === true;
+
+    return matchesSearch && matchesStatus;
+  });
 
   return (
     <PermissionGuard permission="services:view">
@@ -133,6 +152,19 @@ export default function ServicesPage() {
                 className="w-full sm:w-64 pl-10 pr-4 py-2.5 bg-foreground/5 border border-foreground/10 rounded-xl focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all text-foreground placeholder:text-foreground/20"
               />
             </div>
+            
+            <button
+              onClick={() => setShowInactive(!showInactive)}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-xs font-bold uppercase tracking-widest transition-all ${
+                showInactive 
+                  ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' 
+                  : 'bg-foreground/5 text-foreground/60 border-foreground/10 hover:bg-foreground/10'
+              }`}
+            >
+              <Archive size={16} />
+              {showInactive ? "Ver Activos" : "Ver Archivados"}
+            </button>
+
             {hasManageServices && (
               <button 
                 onClick={handleOpenNew}
@@ -187,40 +219,56 @@ export default function ServicesPage() {
                     <tr 
                       key={service.id} 
                       onClick={() => handleViewDetails(service)}
-                      className="group hover:bg-foreground/5 transition-colors cursor-pointer"
+                      className={`group transition-colors cursor-pointer ${!service.active ? 'bg-amber-500/5 hover:bg-amber-500/10' : 'hover:bg-foreground/5'}`}
                     >
-                      <td className="p-4 pl-6">
-                        <p className="font-bold text-foreground">{service.name}</p>
+                      <td className="p-4 pl-6 relative">
+                        {!service.active && (
+                           <div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-500/50" />
+                        )}
+                        <p className={`font-bold ${!service.active ? 'text-amber-500' : 'text-foreground'}`}>{service.name}</p>
                         {service.description && (
-                           <p className="text-[10px] text-foreground/50 truncate max-w-xs">{service.description}</p>
+                           <p className={`text-[10px] truncate max-w-xs ${!service.active ? 'text-amber-500/70' : 'text-foreground/50'}`}>{service.description}</p>
                         )}
                       </td>
                       <td className="p-4">
-                        <div className="flex items-center gap-2 text-primary/80 text-xs font-black uppercase tracking-widest">
+                        <div className={`flex items-center gap-2 text-xs font-black uppercase tracking-widest ${!service.active ? 'text-amber-500/80' : 'text-primary/80'}`}>
                           <Clock size={14} />
                           {formatDuration(service.duration_minutes)}
                         </div>
                       </td>
-                      <td className="p-4 text-emerald-400 font-black italic">
+                      <td className={`p-4 font-black italic ${!service.active ? 'text-amber-600' : 'text-emerald-400'}`}>
                         {new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(Number(service.price))}
                       </td>
                       <td className="p-4 pr-6 text-right">
                         {hasManageServices && (
                           <div className="flex items-center justify-end gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                            <button 
-                              onClick={(e) => { e.stopPropagation(); handleEdit(service); }} 
-                              className="p-2 text-foreground/40 hover:text-foreground hover:bg-foreground/10 rounded-lg transition-colors" 
-                              title="Editar"
-                            >
-                              <Pencil size={16} />
-                            </button>
-                            <button 
-                              onClick={(e) => { e.stopPropagation(); handleDeleteRequest(service.id, service.name); }} 
-                              className="p-2 text-foreground/40 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors" 
-                              title="Eliminar"
-                            >
-                              <Trash2 size={16} />
-                            </button>
+                            {!service.active ? (
+                              <button 
+                                onClick={(e) => handleRestore(service.id, e)} 
+                                className="p-2 text-amber-500/70 hover:text-amber-500 hover:bg-amber-500/10 rounded-lg transition-colors flex items-center gap-2 text-xs uppercase tracking-widest font-bold" 
+                                title="Restaurar"
+                              >
+                                <RefreshCcw size={16} />
+                                Restaurar
+                              </button>
+                            ) : (
+                              <>
+                                <button 
+                                  onClick={(e) => { e.stopPropagation(); handleEdit(service); }} 
+                                  className="p-2 text-foreground/40 hover:text-foreground hover:bg-foreground/10 rounded-lg transition-colors" 
+                                  title="Editar"
+                                >
+                                  <Pencil size={16} />
+                                </button>
+                                <button 
+                                  onClick={(e) => { e.stopPropagation(); handleArchiveRequest(service.id, service.name); }} 
+                                  className="p-2 text-foreground/40 hover:text-amber-500 hover:bg-amber-500/10 rounded-lg transition-colors" 
+                                  title="Archivar"
+                                >
+                                  <Archive size={16} />
+                                </button>
+                              </>
+                            )}
                           </div>
                         )}
                       </td>
@@ -236,8 +284,9 @@ export default function ServicesPage() {
           <ServiceDetailsModal 
             service={viewingService}
             onClose={() => setIsDetailsOpen(false)}
-            onEdit={hasManageServices ? () => handleEdit(viewingService) : undefined}
-            onDelete={hasManageServices ? handleDeleteFromDetails : undefined}
+            onEdit={hasManageServices && viewingService.active ? () => handleEdit(viewingService) : undefined}
+            onArchive={hasManageServices && viewingService.active ? handleArchiveFromDetails : undefined}
+            onRestore={hasManageServices && !viewingService.active ? () => handleRestore(viewingService.id) : undefined}
           />
         )}
 
@@ -253,14 +302,14 @@ export default function ServicesPage() {
           />
         )}
 
-        {/* Confirm Delete Modal */}
+        {/* Confirm Archive Modal */}
         <ConfirmModal
-          isOpen={!!serviceToDelete}
-          onClose={() => setServiceToDelete(null)}
-          onConfirm={executeDelete}
-          title="Eliminar Servicio"
-          description={`¿Estás seguro de que deseas eliminar permanentemente el servicio "${serviceToDelete?.name}"? Esta acción no se puede deshacer.`}
-          isProcessing={isDeleting}
+          isOpen={!!serviceToArchive}
+          onClose={() => setServiceToArchive(null)}
+          onConfirm={executeArchive}
+          title="Archivar Servicio"
+          description={`¿Estás seguro de que deseas archivar el servicio "${serviceToArchive?.name}"? Ya no estará disponible para nuevas citas, pero se mantendrá en el historial de citas pasadas.`}
+          isProcessing={isArchiving}
         />
 
       </div>

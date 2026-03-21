@@ -21,13 +21,14 @@ export class ServiceController {
     }
 
     /**
-     * Obtiene el catálogo de servicios de un Spa.
+     * Obtiene el catálogo de servicios de un Spa. Incluye archivados si se especifica en la query.
      */
     async getBySpa(req: Request, res: Response) {
         try {
             const user = (req as AuthRequest).user;
             const spaId = user?.spaId;
-            const services = await serviceService.getBySpa(spaId as string);
+            const includeArchived = req.query.includeArchived === "true";
+            const services = await serviceService.getBySpa(spaId as string, includeArchived);
             return res.json(services);
         } catch (error: any) {
             return res.status(500).json({ error: error.message });
@@ -68,7 +69,7 @@ export class ServiceController {
     }
 
     /**
-     * Elimina lógicamente un servicio.
+     * Archiva (elimina lógicamente) un servicio.
      */
     async delete(req: Request, res: Response) {
         try {
@@ -77,7 +78,23 @@ export class ServiceController {
             const spaId = user?.spaId;
             const service = await serviceService.softDeleteService(id as string, spaId as string);
             if (!service) return res.status(404).json({ error: "Servicio no encontrado" });
-            return res.json({ message: "Servicio eliminado lógicamente", service });
+            return res.json({ message: "Servicio archivado exitosamente", service });
+        } catch (error: any) {
+            return res.status(500).json({ error: error.message });
+        }
+    }
+
+    /**
+     * Restaura un servicio archivado.
+     */
+    async restore(req: Request, res: Response) {
+        try {
+            const { id } = req.params;
+            const user = (req as AuthRequest).user;
+            const spaId = user?.spaId;
+            const service = await serviceService.restoreService(id as string, spaId as string);
+            if (!service) return res.status(404).json({ error: "Servicio no encontrado" });
+            return res.json({ message: "Servicio restaurado exitosamente", service });
         } catch (error: any) {
             return res.status(500).json({ error: error.message });
         }
