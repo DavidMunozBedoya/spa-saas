@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { AuthRequest } from "../../middleware/auth.js";
 import { AppointmentService } from "./appointment.service.js";
 import { UpdateAppointmentStatusSchema, UpdateAppointmentSchema } from "./appointment.schema.js";
 
@@ -10,8 +11,8 @@ export class AppointmentController {
      */
     async create(req: Request, res: Response) {
         try {
-            const user = (req as any).user;
-            const spaId = user?.spaId || user?.spa_id;
+            const user = (req as AuthRequest).user;
+            const spaId = user?.spaId;
             const appointment = await appointmentService.createAppointment({ ...req.body, spa_id: spaId as string });
             return res.status(201).json(appointment);
         } catch (error: any) {
@@ -25,15 +26,15 @@ export class AppointmentController {
      */
     async getBySpa(req: Request, res: Response) {
         try {
-            const user = (req as any).user;
-            const spaId = user?.spaId || user?.spa_id;
+            const user = (req as AuthRequest).user;
+            const spaId = user?.spaId;
             const { status, startDate, endDate, limit, page } = req.query;
 
             const pageSize = parseInt(limit as string) || 20;
             const currentPage = parseInt(page as string) || 1;
             const offset = (currentPage - 1) * pageSize;
 
-            const hasViewAll = (user?.permissions || []).includes("appointments:view-all");
+            const hasViewAll = (user?.permissions || []).includes("appointments:view-all") || user?.isPlatformAdmin;
             const staffIdFilter = !hasViewAll ? (user?.staffId as string) : undefined;
 
             const result = await appointmentService.getBySpa(spaId as string, {
@@ -56,16 +57,16 @@ export class AppointmentController {
     async getById(req: Request, res: Response) {
         try {
             const { id } = req.params;
-            const user = (req as any).user;
-            const spaId = user?.spaId || user?.spa_id;
-            const hasViewAll = (user?.permissions || []).includes("appointments:view-all");
+            const user = (req as AuthRequest).user;
+            const spaId = user?.spaId;
+            const hasViewAll = (user?.permissions || []).includes("appointments:view-all") || user?.isPlatformAdmin;
             
             const appointment = await appointmentService.getById(id as string, spaId as string);
             
             if (!appointment) return res.status(404).json({ error: "Cita no encontrada" });
 
             // Si no tiene permiso global, verificar que la cita le pertenezca
-            if (!hasViewAll && appointment.staff_id !== user.staffId) {
+            if (!hasViewAll && appointment.staff_id !== user?.staffId) {
                 return res.status(403).json({ error: "No tienes permiso para ver esta cita" });
             }
 
@@ -81,8 +82,8 @@ export class AppointmentController {
     async updateStatus(req: Request, res: Response) {
         try {
             const { id } = req.params;
-            const user = (req as any).user;
-            const spaId = user?.spaId || user?.spa_id;
+            const user = (req as AuthRequest).user;
+            const spaId = user?.spaId;
             const { status } = UpdateAppointmentStatusSchema.parse(req.body);
             const updated = await appointmentService.updateStatus(id as string, spaId as string, status);
             if (!updated) return res.status(404).json({ error: "Cita no encontrada" });
@@ -101,8 +102,8 @@ export class AppointmentController {
     async update(req: Request, res: Response) {
         try {
             const { id } = req.params;
-            const user = (req as any).user;
-            const spaId = user?.spaId || user?.spa_id;
+            const user = (req as AuthRequest).user;
+            const spaId = user?.spaId;
             const data = UpdateAppointmentSchema.parse(req.body);
 
             const updated = await appointmentService.updateAppointment({ ...data, id: id as string, spa_id: spaId as string });

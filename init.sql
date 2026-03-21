@@ -116,6 +116,11 @@ CREATE TABLE IF NOT EXISTS appointments (
     CHECK (end_time > start_time)
 );
 
+-- Índices para optimizar validación de solapamientos y listados (Evitar Sequential Scans)
+CREATE INDEX IF NOT EXISTS idx_appointments_staff_overlap ON appointments(spa_id, staff_id, start_time, end_time);
+CREATE INDEX IF NOT EXISTS idx_appointments_client_overlap ON appointments(spa_id, client_id, start_time, end_time);
+CREATE INDEX IF NOT EXISTS idx_appointments_spa_date ON appointments(spa_id, start_time);
+
 -- Servicios en citas (Muchos a Muchos)
 CREATE TABLE IF NOT EXISTS appointment_services (
     appointment_id UUID REFERENCES appointments(id) ON DELETE CASCADE,

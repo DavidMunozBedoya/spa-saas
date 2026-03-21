@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { AuthRequest } from "../../middleware/auth.js";
 import { InvoiceService } from "./invoice.service.js";
 import { CreateInvoiceSchema } from "./invoice.schema.js";
 
@@ -7,12 +8,12 @@ const invoiceService = new InvoiceService();
 export class InvoiceController {
     async list(req: Request, res: Response) {
         try {
-            const user = (req as any).user;
-            const spaId = user?.spaId || user?.spa_id;
+            const user = (req as AuthRequest).user;
+            const spaId = user?.spaId;
             const { startDate, endDate, invoiceNumber } = req.query;
 
             const invoices = await invoiceService.searchInvoices({
-                spa_id: spaId,
+                spa_id: spaId as string,
                 startDate: startDate as string,
                 endDate: endDate as string,
                 invoiceNumber: invoiceNumber as string
@@ -26,8 +27,8 @@ export class InvoiceController {
 
     async liquidate(req: Request, res: Response) {
         try {
-            const user = (req as any).user;
-            const spaId = user?.spaId || user?.spa_id;
+            const user = (req as AuthRequest).user;
+            const spaId = user?.spaId;
             const data = CreateInvoiceSchema.parse(req.body);
             const invoice = await invoiceService.liquidateAppointment({ ...data, spa_id: spaId as string });
             return res.status(201).json(invoice);
@@ -42,8 +43,8 @@ export class InvoiceController {
     async getById(req: Request, res: Response) {
         try {
             const { id } = req.params;
-            const user = (req as any).user;
-            const spaId = user?.spaId || user?.spa_id;
+            const user = (req as AuthRequest).user;
+            const spaId = user?.spaId;
             const invoice = await invoiceService.getInvoiceById(id as string, spaId as string);
             if (!invoice) return res.status(404).json({ error: "Factura no encontrada" });
             return res.json(invoice);
@@ -55,8 +56,8 @@ export class InvoiceController {
     async getPDF(req: Request, res: Response) {
         try {
             const { id } = req.params;
-            const user = (req as any).user;
-            const spaId = user?.spaId || user?.spa_id;
+            const user = (req as AuthRequest).user;
+            const spaId = user?.spaId;
             const invoice = await invoiceService.getInvoiceById(id as string, spaId as string);
             if (!invoice) return res.status(404).json({ error: "Factura no encontrada" });
 

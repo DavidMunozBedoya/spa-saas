@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { AuthRequest } from "../../middleware/auth.js";
 import { SpaService } from "./spa.service.js";
 import { CreateSpaSchema, UpdateSpaSchema } from "./spa.schema.js";
 
@@ -80,8 +81,9 @@ export class SpaController {
      */
     async getSettings(req: Request, res: Response) {
         try {
-            const { spaId } = (req as any).user;
-            const spa = await spaService.getSpaById(spaId);
+            const user = (req as AuthRequest).user;
+            const spaId = user?.spaId;
+            const spa = await spaService.getSpaById(spaId as string);
             if (!spa) return res.status(404).json({ error: "Spa no encontrado" });
             return res.json(spa);
         } catch (error: any) {
@@ -94,9 +96,10 @@ export class SpaController {
      */
     async updateSettings(req: Request, res: Response) {
         try {
-            const { spaId } = (req as any).user;
+            const user = (req as AuthRequest).user;
+            const spaId = user?.spaId;
             const validatedData = UpdateSpaSchema.parse(req.body);
-            const updated = await spaService.updateSpa(spaId, validatedData);
+            const updated = await spaService.updateSpa(spaId as string, validatedData);
             return res.json(updated);
         } catch (error: any) {
             if (error.name === "ZodError") {

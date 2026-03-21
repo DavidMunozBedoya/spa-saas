@@ -18,7 +18,7 @@ import {
   ShieldCheck,
   ChevronLeft,
   ChevronRight,
-  LogOut
+  Contact
 } from "lucide-react";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
@@ -35,6 +35,7 @@ const menuItems = [
   { icon: ShieldCheck, label: "Accesos", href: "/dashboard/users", reqPermission: "users:manage" },
   { icon: Briefcase, label: "Servicios", href: "/dashboard/services", reqPermission: "services:view" },
   { icon: Calendar, label: "Citas", href: "/dashboard/appointments", reqPermission: "appointments:view" },
+  { icon: Contact, label: "Clientes", href: "/dashboard/clients", reqPermission: "clients:view" },
   { icon: Settings, label: "Configuración", href: "/dashboard/settings", reqPermission: "spa:config" },
 ];
 
@@ -64,11 +65,6 @@ export default function Sidebar() {
     return () => window.removeEventListener('toggleSidebar', handleToggle);
   }, []);
 
-  const handleLogout = () => {
-    sessionStorage.removeItem("token");
-    sessionStorage.removeItem("user");
-    window.location.href = "/login";
-  };
 
   if (permsLoading) return null;
 
@@ -148,18 +144,43 @@ export default function Sidebar() {
       </nav>
 
       <div className="mt-auto">
-        <div className={cn("p-4 border-t border-foreground/10", isCollapsed && "px-2")}>
-          <button 
-              onClick={handleLogout}
-              className={cn(
-                  "flex items-center gap-3 w-full px-4 py-2.5 rounded-xl text-red-400 hover:bg-red-500/10 transition-all",
-                  isCollapsed && "justify-center px-0"
-              )}
-          >
-              <LogOut size={20} />
-              {!isCollapsed && <span className="font-medium uppercase text-xs tracking-widest">Cerrar Sesión</span>}
-          </button>
-        </div>
+        {(spaConfig?.facebook_url || spaConfig?.instagram_url || spaConfig?.phone) && (
+          <div className={cn("px-6 py-4 flex items-center gap-4 border-t border-foreground/5", isCollapsed && "px-0 justify-center flex-col gap-6")}>
+            {spaConfig.facebook_url && (
+              <a 
+                href={spaConfig.facebook_url} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-foreground/40 hover:text-[#1877F2] transition-colors"
+                title="Facebook"
+              >
+                <Facebook size={18} />
+              </a>
+            )}
+            {spaConfig.instagram_url && (
+              <a 
+                href={spaConfig.instagram_url} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-foreground/40 hover:text-[#E4405F] transition-colors"
+                title="Instagram"
+              >
+                <Instagram size={18} />
+              </a>
+            )}
+            {spaConfig.phone && (
+              <a 
+                href={`https://wa.me/${spaConfig.phone.replace(/\D/g, '')}`} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-foreground/40 hover:text-[#25D366] transition-colors"
+                title="WhatsApp"
+              >
+                <Phone size={18} />
+              </a>
+            )}
+          </div>
+        )}
       </div>
     </aside>
     </>

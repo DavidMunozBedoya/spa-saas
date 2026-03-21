@@ -2,21 +2,39 @@ import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { PermissionService } from "../modules/users/permission.service.js";
 
-const jwtSecret = process.env.JWT_SECRET || "supersecretkey_change_me_in_production";
+// ─── JWT Secret Validado al arrancar ───
+
+if (!process.env.JWT_SECRET) {
+    throw new Error("FATAL ERROR: JWT_SECRET environment variable is not defined");
+}
+const jwtSecret = process.env.JWT_SECRET;
+
 const permissionService = new PermissionService();
 
-export interface AuthRequest extends Request {
-    user?: {
-        userId: string;
-        spaId?: string;
-        roleIds?: number[];
-        role?: string;
-        isPlatformAdmin?: boolean;
-        permissions?: string[];
-    };
+// ─── Interfaz del payload decodificado del JWT ───
+
+export interface JwtPayload {
+    userId: string;
+    spaId?: string;
+    staffId?: string | null;
+    roleIds?: number[];
+    role?: string;         // "SUPER_ADMIN" para platform_users
+    isPlatformAdmin?: boolean;
 }
 
-export const authenticateToken = (req: Request, res: Response, next: NextFunction) => {
+// ─── Interfaz de Request autenticado ───
+
+export interface AuthUser extends JwtPayload {
+    permissions?: string[];
+}
+
+export interface AuthRequest extends Request {
+    user?: AuthUser;
+}
+
+// ─── Middleware de autenticación ───
+
+export const authenticateToken = async (req: Request, res: Response, next: NextFunction) => {
     const authHeader = req.headers["authorization"];
     const token = authHeader && authHeader.split(" ")[1];
 
@@ -24,29 +42,33 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
         return res.status(401).json({ error: "Acceso denegado (Token faltante)" });
     }
 
-    jwt.verify(token, jwtSecret, async (err: any, user: any) => {
-        if (err) {
-            return res.status(403).json({ error: "Token inválido o expirado" });
-        }
+    try {
+        const decoded = jwt.verify(token, jwtSecret) as JwtPayload;
+
+        const authUser: AuthUser = { ...decoded };
 
         // Cargar permisos dinámicamente si es un usuario de Spa
-        if (user.userId && user.spaId) {
-            try {
-                user.permissions = await permissionService.getUserPermissions(user.userId, user.spaId);
-            } catch (error) {
-                console.error("Error al cargar permisos:", error);
-                user.permissions = [];
-            }
+        if (decoded.userId && decoded.spaId) {
+            authUser.permissions = await permissionService.getUserPermissions(decoded.userId, decoded.spaId);
         }
 
-        (req as AuthRequest).user = user;
+        (req as AuthRequest).user = authUser;
         next();
-    });
+    } catch (error) {
+        if (error instanceof jwt.TokenExpiredError) {
+            return res.status(401).json({ error: "Token expirado, inicia sesión nuevamente" });
+        }
+        if (error instanceof jwt.JsonWebTokenError) {
+            return res.status(401).json({ error: "Token inválido" });
+        }
+        // Error inesperado (DB, permisos, etc.)
+        console.error("Error crítico en autenticación:", error);
+        next(error);
+    }
 };
 
-/**
- * Middleware para requerir un permiso específico.
- */
+// ─── Middleware de autorización por permiso ───
+
 export const authorizePermission = (permissionCode: string) => {
     return (req: Request, res: Response, next: NextFunction) => {
         const authReq = req as AuthRequest;

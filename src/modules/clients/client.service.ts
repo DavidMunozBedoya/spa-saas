@@ -1,102 +1,100 @@
-import pool from "../../config/db.js";
+import { ClientRepository } from "./client.repository.js";
 import { CreateClientInput, UpdateClientInput } from "./client.schema.js";
+
+const repository = new ClientRepository();
 
 export class ClientService {
     /**
-     * Crea un cliente verificando que el email sea único dentro de un mismo Spa.
+     * Crea un cliente o reactiva uno previamente eliminado.
+     * 
+     * FLUJO DE DECISIÓN:
+     *   1. Si ya existe un cliente ACTIVO con esa cédula → Error (duplicado real)
+     *   2. Si existe un cliente INACTIVO con esa cédula → Reactivar y actualizar datos
+     *   3. Si no existe ninguno → Crear nuevo registro
+     * 
+     * ¿Por qué? La tabla tiene un constraint UNIQUE(spa_id, identity_number),
+     * que NO distingue entre activos e inactivos. Si intentamos INSERT con una
+     * cédula que ya existe (aunque inactiva), PostgreSQL lo rechaza.
      */
     async createClient(data: CreateClientInput) {
-        const { spa_id, full_name, identity_number, email, phone, birth_date } = data;
+        const { spa_id, identity_number } = data;
 
-        // Remover verificación de email único (se permite email compartido entre familiares)
-
-        // Verificar si la identidad ya existe
         if (identity_number) {
-            const identityExists = await pool.query(
-                "SELECT id FROM clients WHERE spa_id = $1 AND identity_number = $2 AND active = true",
-                [spa_id, identity_number]
-            );
-            if (identityExists.rows.length > 0) {
+            // Paso 1: ¿Ya existe un cliente ACTIVO con esta cédula?
+            const activeClient = await repository.findByIdentityNumber(spa_id, identity_number);
+            if (activeClient) {
                 throw new Error("Esta identificación ya está registrada para otro cliente");
+            }
+
+            // Paso 2: ¿Existe un cliente INACTIVO (eliminado) con esta cédula?
+            const inactiveClient = await repository.findInactiveByIdentity(spa_id, identity_number);
+            if (inactiveClient) {
+                // En vez de crear uno nuevo, reactivamos el existente con los datos nuevos
+                return repository.reactivate(inactiveClient.id, data);
             }
         }
 
-        const result = await pool.query(
-            `INSERT INTO clients (spa_id, full_name, identity_number, email, phone, birth_date) 
-       VALUES ($1, $2, $3, $4, $5, $6) 
-       RETURNING *`,
-            [spa_id, full_name, identity_number, email, phone, birth_date]
-        );
-
-        return result.rows[0];
+        // Paso 3: No existe ninguno → Crear nuevo
+        return repository.create(data);
     }
 
     /**
-     * Busca un cliente por su número de identidad dentro de un Spa.
+     * Busca un cliente por su número de identidad (cédula/DNI).
+     * Es un proxy directo al repositorio porque no hay lógica adicional.
      */
-    async findByIdentity(spa_id: string, identity_number: string) {
-        const result = await pool.query(
-            "SELECT * FROM clients WHERE spa_id = $1 AND identity_number = $2 AND active = true",
-            [spa_id, identity_number]
-        );
-        return result.rows[0];
+    async findByIdentity(spaId: string, identityNumber: string) {
+        return repository.findFullByIdentity(spaId, identityNumber);
     }
 
     /**
-     * Obtiene todos los clientes activos de un Spa.
+     * Lista clientes de un Spa. Incluye archivados si se indica.
      */
-    async getBySpa(spa_id: string) {
-        const result = await pool.query(
-            "SELECT * FROM clients WHERE spa_id = $1 AND active = true ORDER BY full_name ASC",
-            [spa_id]
-        );
-        return result.rows;
+    async getBySpa(spaId: string, includeArchived = false) {
+        return repository.findBySpa(spaId, includeArchived);
     }
 
     /**
-     * Busca un cliente por su identificador único.
+     * Obtiene un cliente por ID.
      */
-    async getById(id: string, spa_id: string) {
-        const result = await pool.query(
-            "SELECT * FROM clients WHERE id = $1 AND spa_id = $2 AND active = true",
-            [id, spa_id]
-        );
-        return result.rows[0];
+    async getById(id: string, spaId: string) {
+        return repository.findById(id, spaId);
     }
 
     /**
      * Actualiza la información de un cliente.
+     * 
+     * LÓGICA DE NEGOCIO que se queda aquí:
+     *   - Whitelist de campos permitidos (seguridad)
+     *   - Si no hay campos válidos, retorna el cliente sin modificar
+     * 
+     * SQL que se delegó al repositorio:
+     *   - update() → construcción dinámica del UPDATE
      */
-    async updateClient(id: string, spa_id: string, data: UpdateClientInput) {
-        const updateData: any = { ...data };
+    async updateClient(id: string, spaId: string, data: UpdateClientInput) {
+        const updateData: Record<string, unknown> = { ...data };
 
-        // Whitelist de campos permitidos
         const allowedFields = ['full_name', 'identity_number', 'email', 'phone', 'birth_date', 'active'];
         const fields = Object.keys(updateData).filter(key =>
             allowedFields.includes(key) && updateData[key] !== undefined
         );
 
-        if (fields.length === 0) return this.getById(id, spa_id);
+        if (fields.length === 0) return this.getById(id, spaId);
 
-        const setClause = fields.map((key, index) => `${key} = $${index + 3}`).join(", ");
         const values = fields.map(key => updateData[key]);
-
-        const result = await pool.query(
-            `UPDATE clients SET ${setClause} WHERE id = $1 AND spa_id = $2 AND active = true RETURNING *`,
-            [id, spa_id, ...values]
-        );
-
-        return result.rows[0];
+        return repository.update(id, spaId, fields, values);
     }
 
     /**
-     * Desactiva la ficha del cliente (borrado lógico).
+     * Desactiva la ficha del cliente (archivado).
      */
-    async softDeleteClient(id: string, spa_id: string) {
-        const result = await pool.query(
-            "UPDATE clients SET active = false WHERE id = $1 AND spa_id = $2 RETURNING *",
-            [id, spa_id]
-        );
-        return result.rows[0];
+    async softDeleteClient(id: string, spaId: string) {
+        return repository.softDelete(id, spaId);
+    }
+
+    /**
+     * Restaura un cliente archivado (lo vuelve activo).
+     */
+    async restoreClient(id: string, spaId: string) {
+        return repository.restoreById(id, spaId);
     }
 }

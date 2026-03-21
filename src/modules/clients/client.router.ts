@@ -14,6 +14,7 @@ router.get("/", authorizePermission("clients:view"), clientController.getBySpa);
 router.get("/search", authorizePermission("clients:view"), clientController.findByIdentity);
 router.get("/:id", authorizePermission("clients:view"), clientController.getById);
 router.patch("/:id", authorizePermission("clients:manage"), validate(UpdateClientSchema), clientController.update);
+router.patch("/:id/restore", authorizePermission("clients:manage"), clientController.restore);
 router.delete("/:id", authorizePermission("clients:manage"), clientController.delete);
 
 export default router;

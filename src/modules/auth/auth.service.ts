@@ -1,35 +1,43 @@
-import pool from "../../config/db.js";
+import { AuthRepository, SpaUserEntity, PlatformUserEntity } from "./auth.repository.js";
 import { comparePassword } from "../../utils/security.js";
 import jwt from "jsonwebtoken";
 import { LoginInput } from "./auth.schema.js";
 import { PermissionService } from "../users/permission.service.js";
 
+if (!process.env.JWT_SECRET) {
+    throw new Error("FATAL ERROR: JWT_SECRET environment variable is not defined");
+}
+const jwtSecret = process.env.JWT_SECRET;
+
+const repository = new AuthRepository();
+
+interface LoginResult {
+    token: string;
+    user: {
+        id: string;
+        full_name?: string;
+        email: string;
+        spa_id?: string;
+        staff_id?: string | null;
+        role_ids?: number[];
+        permissions?: string[];
+        isPlatformAdmin: boolean;
+        type?: string;
+        role?: string;
+    };
+}
+
 export class AuthService {
-    private jwtSecret = process.env.JWT_SECRET || "supersecretkey_change_me_in_production";
     private permissionService = new PermissionService();
 
     /**
      * Valida credenciales de usuarios de Spas y genera un token JWT con el spaId incluido.
      */
-    async login(data: LoginInput) {
+    async login(data: LoginInput): Promise<LoginResult> {
         const { email, password } = data;
 
-        // 1. Intentar buscar en usuarios de Spas
-        const result = await pool.query(
-            `SELECT u.id, u.spa_id, u.full_name, u.password_hash, u.active, u.staff_id,
-                    ARRAY_AGG(ur.role_id) as role_ids,
-                    s.active as spa_active
-             FROM users u
-             INNER JOIN spas s ON u.spa_id = s.id
-             LEFT JOIN user_roles ur ON u.id = ur.user_id
-             WHERE u.email = $1
-             GROUP BY u.id, s.active, u.staff_id`,
-            [email]
-        );
+        const user: SpaUserEntity | null = await repository.findSpaUserByEmail(email);
 
-        const user = result.rows[0];
-
-        // 2. Si se encuentra en 'users', validar contraseña
         if (user) {
             if (!user.active || !user.spa_active) {
                 throw new Error("Cuenta desactivada o Spa no disponible");
@@ -47,7 +55,7 @@ export class AuthService {
                     staffId: user.staff_id,
                     roleIds: user.role_ids
                 },
-                this.jwtSecret,
+                jwtSecret,
                 { expiresIn: "8h" }
             );
 
@@ -75,35 +83,27 @@ export class AuthService {
     /**
      * Valida credenciales de SuperAdmin en la tabla platform_users y genera un token administrativo.
      */
-    async platformLogin(data: LoginInput) {
+    async platformLogin(data: LoginInput): Promise<LoginResult> {
         const { email, password } = data;
 
-        // 1. Buscar en platform_users
-        const result = await pool.query(
-            "SELECT id, email, password_hash, role, active FROM platform_users WHERE email = $1",
-            [email]
-        );
-
-        const user = result.rows[0];
+        const user: PlatformUserEntity | null = await repository.findPlatformUserByEmail(email);
 
         if (!user || !user.active) {
             throw new Error("Credenciales de plataforma inválidas");
         }
 
-        // 2. Verificar contraseña
         const isPasswordValid = await comparePassword(password, user.password_hash);
         if (!isPasswordValid) {
             throw new Error("Credenciales de plataforma inválidas");
         }
 
-        // 3. Generar JWT de Plataforma
         const token = jwt.sign(
             {
                 userId: user.id,
-                role: user.role, // "SUPER_ADMIN"
+                role: user.role,
                 isPlatformAdmin: true
             },
-            this.jwtSecret,
+            jwtSecret,
             { expiresIn: "4h" }
         );
 

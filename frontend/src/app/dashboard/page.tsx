@@ -214,7 +214,6 @@ export default function DashboardPage() {
           appointmentId={selectedAppointmentId}
           onClose={() => setSelectedAppointmentId(null)}
           canEdit={hasEditPermission}
-          onEdit={() => {}} // No editamos desde aquí por ahora, solo liquidar/ver
           onSuccess={() => {
             fetchData();
           }}

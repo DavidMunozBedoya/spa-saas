@@ -11,8 +11,7 @@
     "seed": "tsx src/scripts/seed.ts",
     "create-admin": "tsx src/scripts/create_superadmin.ts",
     "seed-receptionist": "tsx src/scripts/seed_receptionist.ts",
-    "diagnose-db": "tsx src/scripts/diagnose_db.ts",
-    "test": "vitest run"
+    "diagnose-db": "tsx src/scripts/diagnose_db.ts"
   },
   "keywords": [],
   "author": "David Munoz",
@@ -42,11 +41,8 @@
     "@types/nodemailer": "^7.0.11",
     "@types/pdfkit": "^0.17.5",
     "@types/pg": "^8.16.0",
-    "@types/supertest": "^6.0.3",
-    "supertest": "^7.2.2",
     "ts-node-dev": "^2.0.0",
     "tsx": "^4.21.0",
-    "typescript": "^5.9.3",
-    "vitest": "^4.0.18"
+    "typescript": "^5.9.3"
   }
 }

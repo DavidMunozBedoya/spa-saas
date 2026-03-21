@@ -353,6 +353,7 @@ export default function AppointmentsPage() {
         {isModalOpen && (
           <NewAppointmentModal 
             appointmentToEdit={editingAppointment}
+            isEditMode={!!editingAppointment}
             initialStaffId={timelineSelection?.staffId}
             initialStartTime={timelineSelection?.startTime}
             onClose={() => {

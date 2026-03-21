@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { AuthRequest } from "../../middleware/auth.js";
 import { StaffService } from "./staff.service.js";
 // No needed import for schema here
 
@@ -11,8 +12,8 @@ export class StaffController {
     async create(req: Request, res: Response) {
         try {
             // Extraer spaId con fallback para evitar undefined
-            const user = (req as any).user;
-            const spaId = user?.spaId || user?.spa_id;
+            const user = (req as AuthRequest).user;
+            const spaId = user?.spaId;
 
             const staff = await staffService.createStaff({ ...req.body, spa_id: spaId as string });
             return res.status(201).json(staff);
@@ -24,8 +25,8 @@ export class StaffController {
     // Listar solo los terapeutas
     async getTherapists(req: Request, res: Response) {
         try {
-            const user = (req as any).user;
-            const spaId = user?.spaId || user?.spa_id;
+            const user = (req as AuthRequest).user;
+            const spaId = user?.spaId;
             const hasViewAll = user?.permissions?.includes("staff:view-all");
 
             if (!hasViewAll && user?.staffId) {
@@ -45,8 +46,8 @@ export class StaffController {
      */
     async getBySpa(req: Request, res: Response) {
         try {
-            const user = (req as any).user;
-            const spaId = user?.spaId || user?.spa_id;
+            const user = (req as AuthRequest).user;
+            const spaId = user?.spaId;
             const includeInactive = req.query.includeInactive === "true";
             const hasViewAll = user?.permissions?.includes("staff:view-all");
 
@@ -65,8 +66,8 @@ export class StaffController {
     async getById(req: Request, res: Response) {
         try {
             const { id } = req.params;
-            const user = (req as any).user;
-            const spaId = user?.spaId || user?.spa_id;
+            const user = (req as AuthRequest).user;
+            const spaId = user?.spaId;
             const member = await staffService.getById(id as string, spaId as string);
             if (!member) return res.status(404).json({ error: "Miembro del personal no encontrado" });
             return res.json(member);
@@ -81,8 +82,8 @@ export class StaffController {
     async update(req: Request, res: Response) {
         try {
             const { id } = req.params;
-            const user = (req as any).user;
-            const spaId = user?.spaId || user?.spa_id;
+            const user = (req as AuthRequest).user;
+            const spaId = user?.spaId;
             const updated = await staffService.updateStaff(id as string, spaId as string, req.body);
             return res.json(updated);
         } catch (error: any) {
@@ -96,8 +97,8 @@ export class StaffController {
     async delete(req: Request, res: Response) {
         try {
             const { id } = req.params;
-            const user = (req as any).user;
-            const spaId = user?.spaId || user?.spa_id;
+            const user = (req as AuthRequest).user;
+            const spaId = user?.spaId;
             const member = await staffService.softDeleteStaff(id as string, spaId as string);
             if (!member) return res.status(404).json({ error: "Miembro del personal no encontrado" });
             return res.json({ message: "Miembro del personal eliminado lógicamente", member });
@@ -112,8 +113,8 @@ export class StaffController {
     async reactivate(req: Request, res: Response) {
         try {
             const { id } = req.params;
-            const user = (req as any).user;
-            const spaId = user?.spaId || user?.spa_id;
+            const user = (req as AuthRequest).user;
+            const spaId = user?.spaId;
             const member = await staffService.reactivateStaff(id as string, spaId as string);
             if (!member) return res.status(404).json({ error: "Miembro del personal no encontrado" });
             return res.json({ message: "Miembro del personal reactivado exitosamente", member });

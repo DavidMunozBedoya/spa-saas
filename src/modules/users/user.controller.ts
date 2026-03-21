@@ -13,8 +13,8 @@ export class UserController {
      */
     async create(req: Request, res: Response) {
         try {
-            const userToken = (req as any).user;
-            const spaId = userToken?.spaId || userToken?.spa_id;
+            const userToken = (req as AuthRequest).user;
+            const spaId = userToken?.spaId;
 
             // Inyectar o sobreescribir el spa_id del token por seguridad
             const userData = { ...req.body };
@@ -39,7 +39,7 @@ export class UserController {
         try {
             const { spa_id } = req.params;
             const authReq = req as AuthRequest;
-            const spaIdFromToken = authReq.user?.spaId || (authReq.user as any)?.spa_id;
+            const spaIdFromToken = authReq.user?.spaId;
 
             if (spaIdFromToken && spa_id !== spaIdFromToken && !authReq.user?.isPlatformAdmin) {
                 return res.status(403).json({ error: "No tiene permiso para acceder a los usuarios de otro Spa" });
@@ -59,11 +59,11 @@ export class UserController {
         try {
             const { id } = req.params;
             const authReq = req as AuthRequest;
-            const spaId = authReq.user?.spaId || (authReq.user as any)?.spa_id;
+            const spaId = authReq.user?.spaId;
 
             if (!spaId && !authReq.user?.isPlatformAdmin) return res.status(403).json({ error: "Contexto de Spa no encontrado" });
 
-            const user = await userService.getById(id as string, spaId);
+            const user = await userService.getById(id as string, spaId as string);
             if (!user) return res.status(404).json({ error: "Usuario no encontrado" });
             return res.json(user);
         } catch (error: any) {
@@ -78,12 +78,12 @@ export class UserController {
         try {
             const { id } = req.params;
             const authReq = req as AuthRequest;
-            const spaId = authReq.user?.spaId || (authReq.user as any)?.spa_id;
+            const spaId = authReq.user?.spaId;
 
             if (!spaId && !authReq.user?.isPlatformAdmin) return res.status(403).json({ error: "Contexto de Spa no encontrado" });
 
             const validatedData = UpdateUserSchema.parse(req.body);
-            const updatedUser = await userService.updateUser(id as string, spaId, validatedData);
+            const updatedUser = await userService.updateUser(id as string, spaId as string, validatedData);
             if (!updatedUser) return res.status(404).json({ error: "Usuario no encontrado o no pertenece a su Spa" });
             return res.json(updatedUser);
         } catch (error: any) {
@@ -101,11 +101,11 @@ export class UserController {
         try {
             const { id } = req.params;
             const authReq = req as AuthRequest;
-            const spaId = authReq.user?.spaId || (authReq.user as any)?.spa_id;
+            const spaId = authReq.user?.spaId;
 
             if (!spaId && !authReq.user?.isPlatformAdmin) return res.status(403).json({ error: "Contexto de Spa no encontrado" });
 
-            const user = await userService.softDeleteUser(id as string, spaId);
+            const user = await userService.softDeleteUser(id as string, spaId as string);
             if (!user) return res.status(404).json({ error: "Usuario no encontrado o no pertenece a su Spa" });
             return res.json({ message: "Usuario eliminado lógicamente", user });
         } catch (error: any) {
@@ -121,11 +121,11 @@ export class UserController {
             const { id } = req.params;
             const { permission_code } = req.body;
             const authReq = req as AuthRequest;
-            const spaId = authReq.user?.spaId || (authReq.user as any)?.spa_id;
+            const spaId = authReq.user?.spaId;
 
             if (!spaId && !authReq.user?.isPlatformAdmin) return res.status(403).json({ error: "Contexto de Spa no encontrado" });
 
-            await permissionService.grantPermission(id as string, spaId, permission_code);
+            await permissionService.grantPermission(id as string, spaId as string, permission_code);
             return res.json({ message: `Permiso '${permission_code}' otorgado con éxito` });
         } catch (error: any) {
             return res.status(500).json({ error: error.message });
@@ -140,11 +140,11 @@ export class UserController {
             const { id } = req.params;
             const { permission_code } = req.body;
             const authReq = req as AuthRequest;
-            const spaId = authReq.user?.spaId || (authReq.user as any)?.spa_id;
+            const spaId = authReq.user?.spaId;
 
             if (!spaId && !authReq.user?.isPlatformAdmin) return res.status(403).json({ error: "Contexto de Spa no encontrado" });
 
-            await permissionService.revokePermission(id as string, spaId, permission_code);
+            await permissionService.revokePermission(id as string, spaId as string, permission_code);
             return res.json({ message: `Permiso '${permission_code}' revocado con éxito` });
         } catch (error: any) {
             return res.status(500).json({ error: error.message });
@@ -158,11 +158,11 @@ export class UserController {
         try {
             const { id } = req.params;
             const authReq = req as AuthRequest;
-            const spaId = authReq.user?.spaId || (authReq.user as any)?.spa_id;
+            const spaId = authReq.user?.spaId;
 
             if (!spaId && !authReq.user?.isPlatformAdmin) return res.status(403).json({ error: "Contexto de Spa no encontrado" });
 
-            const permissions = await permissionService.getUserPermissions(id as string, spaId);
+            const permissions = await permissionService.getUserPermissions(id as string, spaId as string);
             return res.json({ permissions });
         } catch (error: any) {
             return res.status(500).json({ error: error.message });

@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { AuthRequest } from "../../middleware/auth.js";
 import { ClientService } from "./client.service.js";
 import { UpdateClientSchema } from "./client.schema.js";
 
@@ -10,8 +11,8 @@ export class ClientController {
      */
     async create(req: Request, res: Response) {
         try {
-            const user = (req as any).user;
-            const spaId = user?.spaId || user?.spa_id;
+            const user = (req as AuthRequest).user;
+            const spaId = user?.spaId;
             const client = await clientService.createClient({ ...req.body, spa_id: spaId });
             return res.status(201).json(client);
         } catch (error: any) {
@@ -24,9 +25,10 @@ export class ClientController {
      */
     async getBySpa(req: Request, res: Response) {
         try {
-            const user = (req as any).user;
-            const spaId = user?.spaId || user?.spa_id;
-            const clients = await clientService.getBySpa(spaId as string);
+            const user = (req as AuthRequest).user;
+            const spaId = user?.spaId;
+            const includeArchived = req.query.includeArchived === "true";
+            const clients = await clientService.getBySpa(spaId as string, includeArchived);
             return res.json(clients);
         } catch (error: any) {
             return res.status(500).json({ error: error.message });
@@ -39,12 +41,12 @@ export class ClientController {
     async findByIdentity(req: Request, res: Response) {
         try {
             const { identity } = req.query;
-            const user = (req as any).user;
-            const spaId = user?.spaId || user?.spa_id;
+            const user = (req as AuthRequest).user;
+            const spaId = user?.spaId;
 
             if (!identity) return res.status(400).json({ error: "Se requiere el número de identificación" });
 
-            const client = await clientService.findByIdentity(spaId, identity as string);
+            const client = await clientService.findByIdentity(spaId as string, identity as string);
             if (!client) return res.status(404).json({ error: "Cliente no encontrado" });
 
             return res.json(client);
@@ -59,8 +61,8 @@ export class ClientController {
     async getById(req: Request, res: Response) {
         try {
             const { id } = req.params;
-            const user = (req as any).user;
-            const spaId = user?.spaId || user?.spa_id;
+            const user = (req as AuthRequest).user;
+            const spaId = user?.spaId;
             const client = await clientService.getById(id as string, spaId as string);
             if (!client) return res.status(404).json({ error: "Cliente no encontrado" });
             return res.json(client);
@@ -75,8 +77,8 @@ export class ClientController {
     async update(req: Request, res: Response) {
         try {
             const { id } = req.params;
-            const user = (req as any).user;
-            const spaId = user?.spaId || user?.spa_id;
+            const user = (req as AuthRequest).user;
+            const spaId = user?.spaId;
             const validatedData = UpdateClientSchema.parse(req.body);
             const updated = await clientService.updateClient(id as string, spaId as string, validatedData);
             if (!updated) return res.status(404).json({ error: "Cliente no encontrado" });
@@ -90,16 +92,32 @@ export class ClientController {
     }
 
     /**
-     * Elimina lógicamente a un cliente.
+     * Archiva un cliente (borrado lógico).
      */
     async delete(req: Request, res: Response) {
         try {
             const { id } = req.params;
-            const user = (req as any).user;
-            const spaId = user?.spaId || user?.spa_id;
+            const user = (req as AuthRequest).user;
+            const spaId = user?.spaId;
             const client = await clientService.softDeleteClient(id as string, spaId as string);
             if (!client) return res.status(404).json({ error: "Cliente no encontrado" });
-            return res.json({ message: "Cliente eliminado lógicamente", client });
+            return res.json({ message: "Cliente archivado exitosamente", client });
+        } catch (error: any) {
+            return res.status(500).json({ error: error.message });
+        }
+    }
+
+    /**
+     * Restaura un cliente archivado.
+     */
+    async restore(req: Request, res: Response) {
+        try {
+            const { id } = req.params;
+            const user = (req as AuthRequest).user;
+            const spaId = user?.spaId;
+            const client = await clientService.restoreClient(id as string, spaId as string);
+            if (!client) return res.status(404).json({ error: "Cliente no encontrado" });
+            return res.json({ message: "Cliente restaurado exitosamente", client });
         } catch (error: any) {
             return res.status(500).json({ error: error.message });
         }

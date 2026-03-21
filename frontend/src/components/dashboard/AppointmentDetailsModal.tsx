@@ -31,7 +31,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 interface AppointmentDetailsModalProps {
   appointmentId: string;
   onClose: () => void;
-  onEdit: (appointment: any) => void;
+  onEdit?: (appointment: any) => void;
   onSuccess: () => void;
   canEdit?: boolean;
 }
@@ -60,6 +60,7 @@ export default function AppointmentDetailsModal({
       setIsLoading(true);
       const response = await api.get(`/appointments/${appointmentId}`);
       setAppointment(response.data);
+      console.log(response.data);
     } catch (error: any) {
       toast.error("Error al cargar los detalles de la cita");
       onClose();
@@ -219,13 +220,15 @@ export default function AppointmentDetailsModal({
                             {appointment.status === 'BOOKED' ? (
                                 canEdit ? (
                                     <>
-                                        <button 
-                                            onClick={() => onEdit(appointment)}
-                                            className="flex-1 flex items-center justify-center gap-2 py-4 bg-foreground/5 border border-foreground/10 rounded-2xl text-foreground font-bold hover:bg-foreground/10 hover:border-foreground/20 transition-all active:scale-[0.98]"
-                                        >
-                                            <Edit3 size={18} />
-                                            Editar
-                                        </button>
+                                        {onEdit && (
+                                            <button 
+                                                onClick={() => onEdit(appointment)}
+                                                className="flex-1 flex items-center justify-center gap-2 py-4 bg-foreground/5 border border-foreground/10 rounded-2xl text-foreground font-bold hover:bg-foreground/10 hover:border-foreground/20 transition-all active:scale-[0.98]"
+                                            >
+                                                <Edit3 size={18} />
+                                                Editar
+                                            </button>
+                                        )}
                                         {canLiquidar && (
                                             <button 
                                                 onClick={() => setShowLiquidation(true)}

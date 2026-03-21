@@ -1,5 +1,7 @@
 import { Request, Response } from "express";
+import { AuthRequest } from "../../middleware/auth.js";
 import { ServiceService } from "./service.service.js";
+import { CreateServiceSchema, UpdateServiceSchema } from "./service.schema.js";
 
 const serviceService = new ServiceService();
 
@@ -9,8 +11,8 @@ export class ServiceController {
      */
     async create(req: Request, res: Response) {
         try {
-            const user = (req as any).user;
-            const spaId = user?.spaId || user?.spa_id;
+            const user = (req as AuthRequest).user;
+            const spaId = user?.spaId;
             const service = await serviceService.createService({ ...req.body, spa_id: spaId as string });
             return res.status(201).json(service);
         } catch (error: any) {
@@ -23,8 +25,8 @@ export class ServiceController {
      */
     async getBySpa(req: Request, res: Response) {
         try {
-            const user = (req as any).user;
-            const spaId = user?.spaId || user?.spa_id;
+            const user = (req as AuthRequest).user;
+            const spaId = user?.spaId;
             const services = await serviceService.getBySpa(spaId as string);
             return res.json(services);
         } catch (error: any) {
@@ -38,8 +40,8 @@ export class ServiceController {
     async getById(req: Request, res: Response) {
         try {
             const { id } = req.params;
-            const user = (req as any).user;
-            const spaId = user?.spaId || user?.spa_id;
+            const user = (req as AuthRequest).user;
+            const spaId = user?.spaId;
             const service = await serviceService.getById(id as string, spaId as string);
             if (!service) return res.status(404).json({ error: "Servicio no encontrado" });
             return res.json(service);
@@ -54,8 +56,8 @@ export class ServiceController {
     async update(req: Request, res: Response) {
         try {
             const { id } = req.params;
-            const user = (req as any).user;
-            const spaId = user?.spaId || user?.spa_id;
+            const user = (req as AuthRequest).user;
+            const spaId = user?.spaId;
             const updated = await serviceService.updateService(id as string, spaId as string, req.body);
             if (!updated) return res.status(404).json({ error: "Servicio no encontrado" });
 
@@ -71,8 +73,8 @@ export class ServiceController {
     async delete(req: Request, res: Response) {
         try {
             const { id } = req.params;
-            const user = (req as any).user;
-            const spaId = user?.spaId || user?.spa_id;
+            const user = (req as AuthRequest).user;
+            const spaId = user?.spaId;
             const service = await serviceService.softDeleteService(id as string, spaId as string);
             if (!service) return res.status(404).json({ error: "Servicio no encontrado" });
             return res.json({ message: "Servicio eliminado lógicamente", service });
