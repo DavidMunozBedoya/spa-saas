@@ -8,7 +8,8 @@ import {
   Search, 
   Loader2, 
   UserCheck, 
-  Power,
+  Archive,
+  RefreshCcw,
   ShieldAlert,
   Pen
 } from "lucide-react";
@@ -28,8 +29,9 @@ export default function UsersPage() {
   const [isNewUserModalOpen, setIsNewUserModalOpen] = useState(false);
   const [editUser, setEditUser] = useState<any | null>(null);
   const [permissionsUser, setPermissionsUser] = useState<any | null>(null);
-  const [userToDelete, setUserToDelete] = useState<any | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [showInactive, setShowInactive] = useState(false);
+  const [userToArchive, setUserToArchive] = useState<any | null>(null);
+  const [isArchiving, setIsArchiving] = useState(false);
 
   const { hasPermission } = usePermissions();
   const hasManageUsers = hasPermission("users:manage");
@@ -51,7 +53,7 @@ export default function UsersPage() {
     if (!spaId) return;
     try {
       setIsLoading(true);
-      const response = await api.get(`/users/spa/${spaId}`);
+      const response = await api.get(`/users/spa/${spaId}`, { params: { includeArchived: "true" } });
       setUsers(response.data);
     } catch (error: any) {
       toast.error(error.response?.data?.error || "Error al cargar las credenciales");
@@ -64,19 +66,30 @@ export default function UsersPage() {
     fetchUsers();
   }, [spaId]);
   
-  const executeDelete = async () => {
-    if (!userToDelete) return;
-    setIsDeleting(true);
+  const handleRestore = async (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    try {
+      await api.patch(`/users/${id}/restore`);
+      toast.success("Accesos restaurados exitosamente");
+      fetchUsers();
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || "Error al restaurar acceso");
+    }
+  };
+
+  const executeArchive = async () => {
+    if (!userToArchive) return;
+    setIsArchiving(true);
     
     try {
-      await api.delete(`/users/${userToDelete.id}`);
-      toast.success("Credenciales desactivadas exitosamente");
-      setUserToDelete(null);
+      await api.delete(`/users/${userToArchive.id}`);
+      toast.success("Credenciales archivadas exitosamente");
+      setUserToArchive(null);
       fetchUsers();
     } catch (error: any) {
       toast.error(error.response?.data?.error || "Error al revocar acceso");
     } finally {
-      setIsDeleting(false);
+      setIsArchiving(false);
     }
   };
 
@@ -92,10 +105,12 @@ export default function UsersPage() {
     return { label: 'Usuario', color: 'bg-foreground/20' };
   };
 
-  const filteredUsers = users.filter(u => 
-    u.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    u.email.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredUsers = users.filter(u => {
+    const matchesSearch = u.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          u.email.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = showInactive ? u.active === false : u.active === true;
+    return matchesSearch && matchesStatus;
+  });
 
   return (
     <PermissionGuard permission="users:manage">
@@ -124,6 +139,17 @@ export default function UsersPage() {
                 className="w-full sm:w-64 pl-10 pr-4 py-2.5 bg-foreground/5 border border-foreground/10 rounded-xl focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all text-foreground placeholder:text-foreground/20"
               />
             </div>
+            <button
+              onClick={() => setShowInactive(!showInactive)}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-xs font-bold uppercase tracking-widest transition-all ${
+                showInactive 
+                  ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' 
+                  : 'bg-foreground/5 text-foreground/60 border-foreground/10 hover:bg-foreground/10'
+              }`}
+            >
+              <Archive size={16} />
+              {showInactive ? "Ver Activos" : "Ver Archivados"}
+            </button>
             {hasManageUsers && (
               <button 
                 onClick={() => setIsNewUserModalOpen(true)}
@@ -168,11 +194,11 @@ export default function UsersPage() {
                     const roleBadge = getRoleBadge(user.role_ids);
                     
                     return (
-                      <tr key={user.id} className="hover:bg-foreground/5 transition-colors group">
+                      <tr key={user.id} className={`hover:bg-foreground/5 transition-colors group relative ${!user.active ? 'bg-amber-500/5 hover:bg-amber-500/10' : ''}`}>
                         <td className="p-5 pl-6">
                           <div className="min-w-0">
-                            <p className="font-bold text-foreground">{user.full_name}</p>
-                            <p className="text-[10px] text-foreground/50 font-mono mt-0.5">{user.email}</p>
+                            <p className={`font-bold transition-colors truncate ${!user.active ? 'text-amber-500' : 'text-foreground group-hover:text-primary'}`}>{user.full_name}</p>
+                            <p className={`text-[10px] font-mono mt-0.5 truncate ${!user.active ? 'text-amber-500/50' : 'text-foreground/50'}`}>{user.email}</p>
                           </div>
                         </td>
                         
@@ -199,33 +225,44 @@ export default function UsersPage() {
                         <td className="p-5 pr-6 text-right">
                           {hasManageUsers && (
                             <div className="flex justify-end gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                              
-                              <button 
-                                onClick={() => setEditUser(user)}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] bg-foreground/5 hover:bg-foreground/10 text-foreground font-black uppercase tracking-widest rounded-lg border border-foreground/10 transition-colors"
-                                title="Editar Credenciales Base"
-                              >
-                                <Pen size={14} className="text-primary" />
-                                Editar
-                              </button>
-  
-                              <button 
-                                onClick={() => setPermissionsUser(user)}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] bg-foreground/5 hover:bg-foreground/10 text-foreground font-black uppercase tracking-widest rounded-lg border border-foreground/10 transition-colors"
-                                title="Gestionar Poderes Dinámicos"
-                              >
-                                <ShieldCheck size={14} className="text-primary" />
-                                Permisos
-                              </button>
-  
-                              <button 
-                                onClick={() => setUserToDelete(user)} 
-                                className="p-1.5 text-foreground/40 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors border border-transparent hover:border-red-400/20" 
-                                title="Revocar Acceso del empleado"
-                              >
-                                <Power size={18} />
-                              </button>
-  
+                              {!user.active ? (
+                                <button 
+                                  onClick={(e) => handleRestore(user.id, e)}
+                                  className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest bg-amber-500/10 text-amber-500 border border-amber-500/20 hover:bg-amber-500/20 rounded-lg transition-colors"
+                                  title="Restaurar Accesos del empleado"
+                                >
+                                  <RefreshCcw size={14} />
+                                  Restaurar
+                                </button>
+                              ) : (
+                                <>
+                                  <button 
+                                    onClick={() => setEditUser(user)}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] bg-foreground/5 hover:bg-foreground/10 text-foreground font-black uppercase tracking-widest rounded-lg border border-foreground/10 transition-colors"
+                                    title="Editar Credenciales Base"
+                                  >
+                                    <Pen size={14} className="text-primary" />
+                                    Editar
+                                  </button>
+      
+                                  <button 
+                                    onClick={() => setPermissionsUser(user)}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] bg-foreground/5 hover:bg-foreground/10 text-foreground font-black uppercase tracking-widest rounded-lg border border-foreground/10 transition-colors"
+                                    title="Gestionar Poderes Dinámicos"
+                                  >
+                                    <ShieldCheck size={14} className="text-primary" />
+                                    Permisos
+                                  </button>
+      
+                                  <button 
+                                    onClick={() => setUserToArchive(user)} 
+                                    className="p-1.5 text-foreground/40 hover:text-amber-500 hover:bg-amber-500/10 rounded-lg transition-colors border border-transparent hover:border-amber-500/20" 
+                                    title="Archivar Credenciales del empleado"
+                                  >
+                                    <Archive size={18} />
+                                  </button>
+                                </>
+                              )}
                             </div>
                           )}
                         </td>
@@ -272,14 +309,14 @@ export default function UsersPage() {
           />
         )}
 
-        {/* Confirm Revoke Modal */}
+        {/* Confirm Archive Modal */}
         <ConfirmModal
-          isOpen={!!userToDelete}
-          onClose={() => setUserToDelete(null)}
-          onConfirm={executeDelete}
-          title="Revocar Credenciales"
-          description={`¿Estás seguro de que deseas revocar el acceso a "${userToDelete?.full_name}"? Esta persona ya no podrá ingresar al sistema, pero su perfil en el Staff seguirá intacto.`}
-          isProcessing={isDeleting}
+          isOpen={!!userToArchive}
+          onClose={() => setUserToArchive(null)}
+          onConfirm={executeArchive}
+          title="Archivar Credenciales"
+          description={`¿Estás seguro de que deseas archivar el acceso de "${userToArchive?.full_name}"? Esta persona ya no podrá ingresar al sistema, pero su perfil en el Staff u otros registros seguirán intactos.`}
+          isProcessing={isArchiving}
         />
 
       </div>

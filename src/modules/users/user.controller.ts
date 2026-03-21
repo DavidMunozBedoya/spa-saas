@@ -45,7 +45,8 @@ export class UserController {
                 return res.status(403).json({ error: "No tiene permiso para acceder a los usuarios de otro Spa" });
             }
 
-            const users = await userService.getBySpa(spa_id as string);
+            const includeArchived = req.query.includeArchived === "true";
+            const users = await userService.getBySpa(spa_id as string, includeArchived);
             return res.json(users);
         } catch (error: any) {
             return res.status(500).json({ error: error.message });
@@ -107,7 +108,26 @@ export class UserController {
 
             const user = await userService.softDeleteUser(id as string, spaId as string);
             if (!user) return res.status(404).json({ error: "Usuario no encontrado o no pertenece a su Spa" });
-            return res.json({ message: "Usuario eliminado lógicamente", user });
+            return res.json({ message: "Credenciales de Usuario archivadas exitosamente", user });
+        } catch (error: any) {
+            return res.status(500).json({ error: error.message });
+        }
+    }
+
+    /**
+     * Reactiva o restaura el acceso de un usuario suspendido, validando el aislamiento.
+     */
+    async restore(req: Request, res: Response) {
+        try {
+            const { id } = req.params;
+            const authReq = req as AuthRequest;
+            const spaId = authReq.user?.spaId;
+
+            if (!spaId && !authReq.user?.isPlatformAdmin) return res.status(403).json({ error: "Contexto de Spa no encontrado" });
+
+            const user = await userService.restoreUser(id as string, spaId as string);
+            if (!user) return res.status(404).json({ error: "Usuario no encontrado o no pertenece a su Spa" });
+            return res.json({ message: "Accesos restaurados exitosamente", user });
         } catch (error: any) {
             return res.status(500).json({ error: error.message });
         }

@@ -17,6 +17,7 @@ router.get("/spa/:spa_id", authorizePermission("users:manage"), userController.g
 router.get("/:id", authorizePermission("users:manage"), userController.getById);
 router.patch("/:id", authorizePermission("users:manage"), validate(UpdateUserSchema), userController.update);
 router.delete("/:id", authorizePermission("users:manage"), userController.delete);
+router.patch("/:id/restore", authorizePermission("users:manage"), userController.restore);
 
 // Gestión de Permisos Dinámicos
 router.get("/:id/permissions", authorizePermission("users:manage"), userController.getPermissions);
