@@ -18,7 +18,9 @@ import {
   UserPlus,
   Sparkles,
   ChevronDown,
-  Save
+  Save,
+  Archive,
+  RefreshCcw
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -61,6 +63,7 @@ export default function NewAppointmentModal({
   const [servicesList, setServicesList] = useState<any[]>([]);
   const [clientFound, setClientFound] = useState<any>(null);
   const [showNewClientFields, setShowNewClientFields] = useState(false);
+  const [archivedClient, setArchivedClient] = useState<any>(null);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const searchTimeout = useRef<NodeJS.Timeout | null>(null);
 
@@ -140,10 +143,11 @@ export default function NewAppointmentModal({
 
   // --- Auto-Search Client Logic ---
   useEffect(() => {
-    if (isEditMode) return; // No buscar en modo edición
+    if (isEditMode) return;
     
     if (!watchIdentity || watchIdentity.length < 5) {
         setClientFound(null);
+        setArchivedClient(null);
         setShowNewClientFields(false);
         setValue("client_id", null);
         return;
@@ -157,15 +161,25 @@ export default function NewAppointmentModal({
             const response = await api.get(`/clients/search?identity=${watchIdentity}`);
             
             if (response.data) {
-                setClientFound(response.data);
-                setValue("client_id", response.data.id);
-                setValue("client_identity", response.data.identity_number);
-                setShowNewClientFields(false);
-                clearErrors("client_identity");
+                // Si el cliente está archivado, mostrar opción de restaurar
+                if (response.data.status === "archived") {
+                    setArchivedClient(response.data);
+                    setClientFound(null);
+                    setShowNewClientFields(false);
+                    setValue("client_id", null);
+                } else {
+                    setClientFound(response.data);
+                    setArchivedClient(null);
+                    setValue("client_id", response.data.id);
+                    setValue("client_identity", response.data.identity_number);
+                    setShowNewClientFields(false);
+                    clearErrors("client_identity");
+                }
             }
         } catch (error: any) {
             if (error.response?.status === 404) {
                 setClientFound(null);
+                setArchivedClient(null);
                 setValue("client_id", null);
                 setShowNewClientFields(true);
             }
@@ -176,6 +190,23 @@ export default function NewAppointmentModal({
 
     return () => { if (searchTimeout.current) clearTimeout(searchTimeout.current); };
   }, [watchIdentity, setValue, clearErrors]);
+
+  // --- Restaurar cliente archivado ---
+  const handleRestoreClient = async () => {
+    if (!archivedClient) return;
+    try {
+      await api.patch(`/clients/${archivedClient.id}/restore`);
+      toast.success(`${archivedClient.full_name} restaurado exitosamente`);
+      // Ahora seleccionamos al cliente restaurado
+      setClientFound({ ...archivedClient, active: true });
+      setArchivedClient(null);
+      setValue("client_id", archivedClient.id);
+      setValue("client_identity", archivedClient.identity_number);
+      clearErrors("client_identity");
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || "Error al restaurar el cliente");
+    }
+  };
 
   const toggleService = (serviceId: string) => {
     setSelectedServices(prev => {
@@ -367,7 +398,30 @@ export default function NewAppointmentModal({
 
                   {/* --- Found / New Client Content --- */}
                   <div className="relative">
-                    {clientFound ? (
+                    {archivedClient ? (
+                      <div className="p-5 rounded-[1.5rem] border border-amber-500/20 bg-amber-500/5 animate-in slide-in-from-top-4 duration-500">
+                          <div className="flex items-center gap-4">
+                              <div className="w-14 h-14 rounded-2xl bg-amber-500/20 flex items-center justify-center text-amber-500 font-black text-xl italic shadow-lg border border-amber-500/30">
+                                  <Archive size={24} />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                  <p className="text-lg font-black text-foreground truncate leading-tight uppercase tracking-tight">{archivedClient.full_name}</p>
+                                  <p className="text-xs text-amber-500 font-bold flex items-center gap-2 mt-1">
+                                      <Archive size={12} />
+                                      Cliente Archivado
+                                  </p>
+                              </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={handleRestoreClient}
+                            className="mt-4 w-full flex items-center justify-center gap-2 py-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400 font-bold text-xs uppercase tracking-widest hover:bg-emerald-500/20 transition-all active:scale-[0.98]"
+                          >
+                            <RefreshCcw size={14} />
+                            Restaurar y Seleccionar
+                          </button>
+                      </div>
+                    ) : clientFound ? (
                       <div className="p-5 rounded-[1.5rem] border border-primary/20 bg-primary/5 animate-in slide-in-from-top-4 duration-500">
                           <div className="flex items-center gap-4">
                               <div className="w-14 h-14 rounded-2xl bg-primary/20 flex items-center justify-center text-primary font-black text-xl italic shadow-lg border border-primary/30">

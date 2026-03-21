@@ -37,6 +37,7 @@ export class ClientController {
 
     /**
      * Busca un cliente por identificación (DNI/Cédula).
+     * Si el cliente existe pero está archivado, informa al frontend.
      */
     async findByIdentity(req: Request, res: Response) {
         try {
@@ -47,7 +48,16 @@ export class ClientController {
             if (!identity) return res.status(400).json({ error: "Se requiere el número de identificación" });
 
             const client = await clientService.findByIdentity(spaId as string, identity as string);
+            
             if (!client) return res.status(404).json({ error: "Cliente no encontrado" });
+
+            if (!client.active) {
+                return res.status(200).json({ 
+                    ...client, 
+                    status: "archived",
+                    message: "Este cliente existe pero está archivado. ¿Deseas restaurarlo?" 
+                });
+            }
 
             return res.json(client);
         } catch (error: any) {

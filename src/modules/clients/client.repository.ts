@@ -75,11 +75,11 @@ export class ClientRepository {
 
     /**
      * Busca un cliente por identidad completa (devuelve todos los campos).
-     * Se usa desde el controller para la búsqueda por cédula/DNI.
+     * Busca tanto activos como archivados para poder informar al frontend.
      */
     async findFullByIdentity(spaId: string, identityNumber: string): Promise<ClientEntity | null> {
         const result = await pool.query(
-            "SELECT * FROM clients WHERE spa_id = $1 AND identity_number = $2 AND active = true",
+            "SELECT * FROM clients WHERE spa_id = $1 AND identity_number = $2",
             [spaId, identityNumber]
         );
         return result.rows[0] || null;
